@@ -565,7 +565,6 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => QuestionManagementScreen(
-          chapter: widget.chapter,
           quiz: quiz,
         ),
       ),

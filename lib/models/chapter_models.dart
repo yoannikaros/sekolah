@@ -333,16 +333,98 @@ class Question {
         print('Error parsing Question from JSON: $e');
         print('JSON data: $json');
       }
-      return Question(
+      
+      // Parse multipleChoiceOptions manually if available
+      List<MultipleChoiceOption>? multipleChoiceOptions;
+      if (json['multipleChoiceOptions'] != null) {
+        try {
+          final optionsData = json['multipleChoiceOptions'];
+          if (kDebugMode) {
+            print('Manual parsing multipleChoiceOptions: $optionsData');
+            print('Type: ${optionsData.runtimeType}');
+          }
+          
+          if (optionsData is List) {
+            multipleChoiceOptions = optionsData
+                .map((e) {
+                  if (kDebugMode) {
+                    print('Processing option: $e (type: ${e.runtimeType})');
+                  }
+                  
+                  if (e is Map<String, dynamic>) {
+                    return MultipleChoiceOption.fromJson(e);
+                  } else if (e is Map) {
+                    // Convert Map to Map<String, dynamic>
+                    final convertedMap = <String, dynamic>{};
+                    e.forEach((key, value) {
+                      convertedMap[key.toString()] = value;
+                    });
+                    return MultipleChoiceOption.fromJson(convertedMap);
+                  } else {
+                    throw Exception('Invalid option format: $e');
+                  }
+                })
+                .toList();
+                
+            if (kDebugMode) {
+              print('Successfully parsed ${multipleChoiceOptions.length} options');
+              for (int i = 0; i < multipleChoiceOptions.length; i++) {
+                final option = multipleChoiceOptions[i];
+                print('Option $i: ${option.optionLabel} = "${option.optionText}" (correct: ${option.isCorrect})');
+              }
+            }
+          }
+        } catch (optionError) {
+          if (kDebugMode) {
+            print('Error parsing multipleChoiceOptions: $optionError');
+            print('Stack trace: ${StackTrace.current}');
+          }
+          multipleChoiceOptions = null;
+        }
+      }
+      
+      // Parse questionType manually
+      QuestionType questionType = QuestionType.multipleChoice;
+      if (json['questionType'] != null) {
+        try {
+          final typeString = json['questionType'] as String;
+          questionType = QuestionType.values.firstWhere(
+            (e) => e.name == typeString,
+            orElse: () => QuestionType.multipleChoice,
+          );
+        } catch (typeError) {
+          if (kDebugMode) {
+            print('Error parsing questionType: $typeError');
+          }
+        }
+      }
+      
+      final question = Question(
         id: json['id'] as String? ?? '',
         quizId: json['quizId'] as String? ?? '',
         questionText: json['questionText'] as String? ?? '',
-        questionType: QuestionType.multipleChoice,
+        questionType: questionType,
+        multipleChoiceOptions: multipleChoiceOptions,
+        essayKeyAnswer: json['essayKeyAnswer'] as String?,
         points: json['points'] as int? ?? 1,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        orderNumber: json['orderNumber'] as int?,
+        createdAt: json['createdAt'] != null 
+            ? DateTime.parse(json['createdAt'] as String)
+            : DateTime.now(),
+        updatedAt: json['updatedAt'] != null 
+            ? DateTime.parse(json['updatedAt'] as String)
+            : DateTime.now(),
         isActive: json['isActive'] as bool? ?? true,
       );
+      
+      if (kDebugMode) {
+        print('Manual parsing result - multipleChoiceOptions: ${question.multipleChoiceOptions}');
+        if (question.multipleChoiceOptions != null) {
+          print('Manual parsing - options count: ${question.multipleChoiceOptions!.length}');
+        }
+      }
+      
+      return question;
     }
   }
 

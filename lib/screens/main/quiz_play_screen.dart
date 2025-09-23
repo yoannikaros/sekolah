@@ -80,6 +80,25 @@ class _QuizPlayScreenState extends State<QuizPlayScreen>
         return;
       }
 
+      // Debug logging for QuizPlayScreen
+      print('QuizPlayScreen: Loaded ${questions.length} questions');
+      for (int i = 0; i < questions.length; i++) {
+        final question = questions[i];
+        print('QuizPlayScreen: Question $i - ID: ${question.id}');
+        print('QuizPlayScreen: Question $i - Type: ${question.questionType}');
+        print('QuizPlayScreen: Question $i - Text: ${question.questionText}');
+        print('QuizPlayScreen: Question $i - Multiple choice options: ${question.multipleChoiceOptions}');
+        if (question.multipleChoiceOptions != null) {
+          print('QuizPlayScreen: Question $i - Options count: ${question.multipleChoiceOptions!.length}');
+          for (int j = 0; j < question.multipleChoiceOptions!.length; j++) {
+            final option = question.multipleChoiceOptions![j];
+            print('QuizPlayScreen: Question $i - Option $j: ${option.optionText} (correct: ${option.isCorrect})');
+          }
+        } else {
+          print('QuizPlayScreen: Question $i - multipleChoiceOptions is NULL!');
+        }
+      }
+
       setState(() {
         _questions = questions;
         _isLoading = false;
@@ -486,6 +505,11 @@ class _QuizPlayScreenState extends State<QuizPlayScreen>
   Widget _buildQuestionContent() {
     final currentQuestion = _questions[_currentQuestionIndex];
     
+    // Debug logging for current question
+    print('QuizPlayScreen: Displaying question ${_currentQuestionIndex + 1}');
+    print('QuizPlayScreen: Current question multipleChoiceOptions: ${currentQuestion.multipleChoiceOptions}');
+    print('QuizPlayScreen: Current question type: ${currentQuestion.questionType}');
+    
     return FadeTransition(
       opacity: _questionFadeAnimation,
       child: SlideTransition(
@@ -521,12 +545,35 @@ class _QuizPlayScreenState extends State<QuizPlayScreen>
               ),
               const SizedBox(height: 24),
               Expanded(
-                child: ListView.builder(
-                  itemCount: currentQuestion.multipleChoiceOptions?.length ?? 0,
-                  itemBuilder: (context, index) {
-                    return _buildAnswerOption(currentQuestion, index);
-                  },
-                ),
+                child: currentQuestion.multipleChoiceOptions == null || 
+                       currentQuestion.multipleChoiceOptions!.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              LucideIcons.alertCircle,
+                              color: Colors.orange,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Pilihan jawaban tidak tersedia',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: currentQuestion.multipleChoiceOptions!.length,
+                        itemBuilder: (context, index) {
+                          return _buildAnswerOption(currentQuestion, index);
+                        },
+                      ),
               ),
             ],
           ),
@@ -536,6 +583,28 @@ class _QuizPlayScreenState extends State<QuizPlayScreen>
   }
 
   Widget _buildAnswerOption(Question question, int index) {
+    // Safety check for multipleChoiceOptions
+    if (question.multipleChoiceOptions == null || 
+        index >= question.multipleChoiceOptions!.length) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[300]!, width: 2),
+        ),
+        child: Text(
+          'Pilihan jawaban tidak tersedia',
+          style: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+          ),
+        ),
+      );
+    }
+
     final isSelected = _selectedAnswerIndex == index;
     final option = question.multipleChoiceOptions![index];
     final isCorrect = option.isCorrect;

@@ -25,7 +25,9 @@ class _AdminSubjectsScreenState extends State<AdminSubjectsScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
     try {
       if (kDebugMode) {
         print('Loading subjects, schools, and class codes from AdminService...');
@@ -45,18 +47,20 @@ class _AdminSubjectsScreenState extends State<AdminSubjectsScreen> {
           print('ClassCode: ${classCode.name} (ID: ${classCode.id}, School: ${classCode.schoolId})');
         }
       }
-      setState(() {
-        _subjects = subjects;
-        _schools = schools;
-        _classCodes = classCodes;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _subjects = subjects;
+          _schools = schools;
+          _classCodes = classCodes;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error loading data: $e');
       }
-      setState(() => _isLoading = false);
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading data: $e')),
         );

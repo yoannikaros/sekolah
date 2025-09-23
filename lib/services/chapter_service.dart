@@ -508,9 +508,30 @@ class ChapterService {
           if (kDebugMode) {
             print('ChapterService: Processing question ${doc.id}');
             print('ChapterService: Raw question data: $data');
+            print('ChapterService: multipleChoiceOptions field: ${data['multipleChoiceOptions']}');
+            print('ChapterService: multipleChoiceOptions type: ${data['multipleChoiceOptions'].runtimeType}');
+            if (data['multipleChoiceOptions'] != null) {
+              print('ChapterService: multipleChoiceOptions length: ${(data['multipleChoiceOptions'] as List).length}');
+              for (int i = 0; i < (data['multipleChoiceOptions'] as List).length; i++) {
+                final option = (data['multipleChoiceOptions'] as List)[i];
+                print('ChapterService: Option $i: $option');
+              }
+            }
           }
           
           final question = Question.fromJson(data);
+          
+          if (kDebugMode) {
+            print('ChapterService: Parsed question multipleChoiceOptions: ${question.multipleChoiceOptions}');
+            if (question.multipleChoiceOptions != null) {
+              print('ChapterService: Parsed options count: ${question.multipleChoiceOptions!.length}');
+              for (int i = 0; i < question.multipleChoiceOptions!.length; i++) {
+                final option = question.multipleChoiceOptions![i];
+                print('ChapterService: Parsed option $i: id=${option.id}, label=${option.optionLabel}, text="${option.optionText}", isCorrect=${option.isCorrect}');
+              }
+            }
+          }
+          
           questions.add(question);
           
           if (kDebugMode) {

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:sekangkatanapp/screens/admin/admin_quiz_management_screen.dart';
 import '../../services/admin_service.dart';
 import 'admin_class_codes_screen.dart';
 import 'admin_students_screen.dart';
 import 'admin_schools_screen.dart';
 import 'admin_subjects_screen.dart';
 import 'admin_teachers_screen.dart';
+import 'chapter_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -296,16 +296,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   ),
                                 ),
                                 _buildManagementCard(
-                                  'Kelola Quiz',
-                                  'Tambah, edit, dan hapus data quiz',
-                                  Icons.school_rounded,
-                                  const Color(0xFF673AB7),
+                                  'Kelola Kuis',
+                                  'Kelola Bab, Kuis, dan Soal dengan sistem bertingkat',
+                                  Icons.quiz_rounded,
+                                  const Color(0xFFFF9800),
                                   () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder:
                                           (context) =>
-                                              const AdminQuizManagementScreen(),
+                                              const ChapterManagementScreen(),
                                     ),
                                   ),
                                 ),

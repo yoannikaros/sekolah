@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'quiz_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -205,10 +206,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                colors: [banner.color, banner.color.withValues(alpha: 0.8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+                    colors: [banner.color, banner.color.withValues(alpha: 0.8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Stack(
@@ -350,12 +351,12 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF000000).withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+          BoxShadow(
+            color: const Color(0xFF000000).withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -419,84 +420,91 @@ class _HomeScreenState extends State<HomeScreen> {
             itemCount: _menuItems.length,
             itemBuilder: (context, index) {
               final menuItem = _menuItems[index];
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF000000).withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: menuItem.color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            menuItem.icon,
-                            color: menuItem.color,
-                            size: 24,
-                          ),
-                        ),
-                        if (menuItem.badge != null) ...[
-                          const SizedBox(width: 8),
+              return GestureDetector(
+                onTap: () {
+                  if (menuItem.isAvailable) {
+                    _handleMenuTap(menuItem.name);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF000000).withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            width: 48,
+                            height: 48,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF59E0B),
+                              color: menuItem.color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Text(
-                              menuItem.badge!,
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
+                            child: Icon(
+                              menuItem.icon,
+                              color: menuItem.color,
+                              size: 24,
                             ),
                           ),
+                          if (menuItem.badge != null) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF59E0B),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                menuItem.badge!,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      menuItem.name,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: menuItem.isAvailable 
-                            ? const Color(0xFF1E293B)
-                            : const Color(0xFF94A3B8),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    Expanded(
-                      child: Text(
-                        menuItem.description,
+                      const SizedBox(height: 12),
+                      Text(
+                        menuItem.name,
                         style: GoogleFonts.poppins(
-                          fontSize: 11,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           color: menuItem.isAvailable 
-                              ? const Color(0xFF64748B)
+                              ? const Color(0xFF1E293B)
                               : const Color(0xFF94A3B8),
-                          height: 1.3,
                         ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 6),
+                      Expanded(
+                        child: Text(
+                          menuItem.description,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: menuItem.isAvailable 
+                                ? const Color(0xFF64748B)
+                                : const Color(0xFF94A3B8),
+                            height: 1.3,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -605,6 +613,28 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
     );
+  }
+
+  void _handleMenuTap(String menuName) {
+    switch (menuName) {
+      case "Quiz Interaktif Dasar":
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const QuizScreen(),
+          ),
+        );
+        break;
+      default:
+        // Handle other menu items
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$menuName akan segera tersedia!'),
+            backgroundColor: const Color(0xFF4F46E5),
+          ),
+        );
+        break;
+    }
   }
 }
 

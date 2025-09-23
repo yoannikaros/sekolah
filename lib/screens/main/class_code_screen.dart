@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import '../../services/quiz_service.dart';
-import '../quiz/quiz_dashboard_screen.dart';
+import 'quiz_screen.dart';
 
 class ClassCodeScreen extends StatefulWidget {
   const ClassCodeScreen({super.key});
@@ -20,24 +20,24 @@ class _ClassCodeScreenState extends State<ClassCodeScreen> {
   @override
   void initState() {
     super.initState();
-    _checkExistingClassCode();
+    //_checkExistingClassCode();
   }
 
-  Future<void> _checkExistingClassCode() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedClassCode = prefs.getString('class_code_id');
+  // Future<void> _checkExistingClassCode() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final savedClassCode = prefs.getString('class_code_id');
     
-    if (savedClassCode != null) {
-      // Navigate to dashboard if class code already exists
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => QuizDashboardScreen(classCodeId: savedClassCode),
-          ),
-        );
-      }
-    }
-  }
+  //   if (savedClassCode != null) {
+  //     // Navigate to dashboard if class code already exists
+  //     if (mounted) {
+  //       Navigator.of(context).pushReplacement(
+  //         MaterialPageRoute(
+  //           builder: (context) => QuizDashboardScreen(classCodeId: savedClassCode),
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
 
   Future<void> _validateAndSaveClassCode() async {
     if (_codeController.text.trim().isEmpty) {
@@ -71,7 +71,7 @@ class _ClassCodeScreenState extends State<ClassCodeScreen> {
         if (mounted) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (context) => QuizDashboardScreen(classCodeId: classCode.id),
+              builder: (context) => const QuizScreen(),
             ),
           );
         }

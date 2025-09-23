@@ -100,23 +100,45 @@ class ChapterService {
       for (final doc in querySnapshot.docs) {
         try {
           final data = doc.data();
+          // Ensure document ID is properly set
           data['id'] = doc.id;
+          
           if (kDebugMode) {
             print('ChapterService: Processing chapter ${doc.id}');
             print('ChapterService: Raw data: $data');
+            print('ChapterService: Document ID set to: ${data['id']}');
+          }
+          
+          // Validate that document ID is not empty
+          if (doc.id.isEmpty) {
+            if (kDebugMode) {
+              print('ChapterService: ERROR - Document ID is empty! Skipping chapter.');
+            }
+            continue;
           }
           
           final chapter = Chapter.fromJson(data);
+          
+          // Double-check that the chapter ID is properly set
+          if (chapter.id.isEmpty) {
+            if (kDebugMode) {
+              print('ChapterService: WARNING - Chapter ID is empty after parsing! Document ID: ${doc.id}');
+            }
+            continue; // Skip this chapter if ID is empty
+          }
+          
           chapters.add(chapter);
           
           if (kDebugMode) {
-            print('ChapterService: Successfully parsed chapter: ${chapter.title}');
+            print('ChapterService: Successfully parsed chapter: ${chapter.title} with ID: ${chapter.id}');
           }
         } catch (e) {
           if (kDebugMode) {
             print('ChapterService: Error parsing chapter ${doc.id}: $e');
             print('ChapterService: Chapter data: ${doc.data()}');
           }
+          // Continue processing other chapters even if one fails
+          continue;
         }
       }
 
@@ -286,17 +308,37 @@ class ChapterService {
       for (final doc in querySnapshot.docs) {
         try {
           final data = doc.data();
+          // Ensure document ID is properly set
           data['id'] = doc.id;
+          
           if (kDebugMode) {
             print('ChapterService: Processing quiz ${doc.id}');
             print('ChapterService: Raw quiz data: $data');
+            print('ChapterService: Document ID set to: ${data['id']}');
+            print('ChapterService: ChapterId in data: ${data['chapterId']}');
           }
           
           final quiz = Quiz.fromJson(data);
+          
+          // Double-check that the quiz has proper IDs
+          if (quiz.id.isEmpty) {
+            if (kDebugMode) {
+              print('ChapterService: WARNING - Quiz ID is empty after parsing! Document ID: ${doc.id}');
+            }
+            continue; // Skip this quiz if ID is empty
+          }
+          
+          if (quiz.chapterId.isEmpty) {
+            if (kDebugMode) {
+              print('ChapterService: WARNING - Quiz chapterId is empty! Quiz ID: ${quiz.id}');
+            }
+            continue; // Skip this quiz if chapterId is empty
+          }
+          
           quizzes.add(quiz);
           
           if (kDebugMode) {
-            print('ChapterService: Successfully parsed quiz: ${quiz.title}');
+            print('ChapterService: Successfully parsed quiz: ${quiz.title} with ID: ${quiz.id} and chapterId: ${quiz.chapterId}');
           }
         } catch (e) {
           if (kDebugMode) {

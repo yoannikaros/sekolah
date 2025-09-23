@@ -456,13 +456,51 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> {
   }
 
   void _navigateToQuizManagement(Chapter chapter) {
-     Navigator.push(
-       context,
-       MaterialPageRoute(
-         builder: (context) => QuizManagementScreen(chapter: chapter),
-       ),
-     ).then((_) => _loadData()); // Refresh when returning
-   }
+    // Debug print untuk memastikan chapter ID tersedia
+    if (kDebugMode) {
+      print('ChapterManagement: Navigating to QuizManagement with chapter ID: ${chapter.id}');
+      print('ChapterManagement: Chapter title: ${chapter.title}');
+    }
+    
+    // Validasi chapter ID sebelum navigasi - harus berupa string yang valid
+    if (chapter.id.isEmpty || chapter.id.trim().isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Chapter ID tidak valid. Silakan refresh halaman dan coba lagi.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+      return;
+    }
+    
+    // Validasi tambahan untuk memastikan ID adalah string yang valid (bukan angka)
+    final chapterId = chapter.id.trim();
+    if (chapterId.length < 3) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Chapter ID terlalu pendek. Silakan refresh halaman.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+      return;
+    }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuizManagementScreen(
+          chapter: chapter,
+          chapterId: chapterId, // Kirim ID yang sudah divalidasi
+        ),
+      ),
+    ).then((_) => _loadData()); // Refresh when returning
+  }
 
   void _showChapterDialog({Chapter? chapter}) {
     final isEdit = chapter != null;

@@ -7,10 +7,12 @@ import 'question_management_screen.dart';
 
 class QuizManagementScreen extends StatefulWidget {
   final Chapter chapter;
+  final String? chapterId; // Parameter tambahan untuk chapter ID yang valid
 
   const QuizManagementScreen({
     super.key,
     required this.chapter,
+    this.chapterId, // Optional, akan fallback ke chapter.id jika null
   });
 
   @override
@@ -26,18 +28,32 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> {
   @override
   void initState() {
     super.initState();
-    _loadQuizzes();
+    // Pindahkan _loadQuizzes ke didChangeDependencies atau gunakan WidgetsBinding
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadQuizzes();
+    });
   }
 
   Future<void> _loadQuizzes() async {
     setState(() => _isLoading = true);
     try {
+      // Gunakan chapterId yang disediakan atau fallback ke chapter.id
+      final effectiveChapterId = widget.chapterId ?? widget.chapter.id;
+      
       if (kDebugMode) {
-        print('QuizManagementScreen: Starting to load quizzes for chapter ${widget.chapter.id}...');
+        print('QuizManagementScreen: Starting to load quizzes for chapter $effectiveChapterId...');
         print('QuizManagementScreen: Chapter title: ${widget.chapter.title}');
+        print('QuizManagementScreen: Using chapterId parameter: ${widget.chapterId}');
+        print('QuizManagementScreen: Chapter.id: ${widget.chapter.id}');
+        print('QuizManagementScreen: Effective chapterId: $effectiveChapterId');
       }
       
-      final quizzes = await _chapterService.getQuizzesByChapterId(widget.chapter.id);
+      // Validasi chapterId
+      if (effectiveChapterId.isEmpty) {
+        throw Exception('Chapter ID is empty! Cannot load quizzes.');
+      }
+      
+      final quizzes = await _chapterService.getQuizzesByChapterId(effectiveChapterId);
       
       if (kDebugMode) {
         print('QuizManagementScreen: Loaded ${quizzes.length} quizzes');
@@ -57,15 +73,19 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> {
         print('QuizManagementScreen: Stack trace: ${StackTrace.current}');
       }
       setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error loading quizzes: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
+      
+      // Gunakan addPostFrameCallback untuk memastikan context tersedia
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error loading quizzes: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      });
     }
   }
 
@@ -249,7 +269,7 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Chapter ID: ${widget.chapter.id}',
+                      'Chapter ID: ${widget.chapterId ?? widget.chapter.id}',
                       style: TextStyle(fontSize: 12, color: Colors.orange[700]),
                     ),
                     Text(
@@ -764,18 +784,43 @@ class _QuizManagementScreenState extends State<QuizManagementScreen> {
       return;
     }
 
+    // Validasi chapterId
+    final effectiveChapterId = widget.chapterId ?? widget.chapter.id;
+    if (effectiveChapterId.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Chapter ID tidak valid. Silakan coba lagi.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
     Navigator.pop(context);
 
     try {
+      if (kDebugMode) {
+        print('QuizManagementScreen: Creating/updating quiz with chapterId: $effectiveChapterId');
+        print('QuizManagementScreen: Chapter title: ${widget.chapter.title}');
+        print('QuizManagementScreen: Using chapterId parameter: ${widget.chapterId}');
+        print('QuizManagementScreen: Chapter.id: ${widget.chapter.id}');
+      }
+
       final quiz = Quiz(
         id: quizId ?? '',
-        chapterId: widget.chapter.id,
+        chapterId: effectiveChapterId,
         title: title.trim(),
         createdDate: isEdit ? _quizzes.firstWhere((q) => q.id == quizId).createdDate : DateTime.now(),
         startDateTime: startDateTime,
         endDateTime: endDateTime,
         isActive: true,
       );
+
+      if (kDebugMode) {
+        print('QuizManagementScreen: Quiz object created with chapterId: ${quiz.chapterId}');
+      }
 
       bool success;
       if (isEdit) {

@@ -138,3 +138,42 @@ Map<String, dynamic> _$QuizSummaryToJson(QuizSummary instance) =>
       'totalQuestions': instance.totalQuestions,
       'totalPoints': instance.totalPoints,
     };
+
+UserAnswer _$UserAnswerFromJson(Map<String, dynamic> json) => UserAnswer(
+  questionId: json['questionId'] as String,
+  selectedAnswerIndex: (json['selectedAnswerIndex'] as num).toInt(),
+  isCorrect: json['isCorrect'] as bool,
+  timeSpent: (json['timeSpent'] as num).toInt(),
+);
+
+Map<String, dynamic> _$UserAnswerToJson(UserAnswer instance) =>
+    <String, dynamic>{
+      'questionId': instance.questionId,
+      'selectedAnswerIndex': instance.selectedAnswerIndex,
+      'isCorrect': instance.isCorrect,
+      'timeSpent': instance.timeSpent,
+    };
+
+QuizResult _$QuizResultFromJson(Map<String, dynamic> json) => QuizResult(
+  quizId: json['quizId'] as String,
+  score: (json['score'] as num).toInt(),
+  totalQuestions: (json['totalQuestions'] as num).toInt(),
+  correctAnswers: (json['correctAnswers'] as num).toInt(),
+  timeSpent: (json['timeSpent'] as num).toInt(),
+  completedAt: DateTime.parse(json['completedAt'] as String),
+  answers:
+      (json['answers'] as List<dynamic>)
+          .map((e) => UserAnswer.fromJson(e as Map<String, dynamic>))
+          .toList(),
+);
+
+Map<String, dynamic> _$QuizResultToJson(QuizResult instance) =>
+    <String, dynamic>{
+      'quizId': instance.quizId,
+      'score': instance.score,
+      'totalQuestions': instance.totalQuestions,
+      'correctAnswers': instance.correctAnswers,
+      'timeSpent': instance.timeSpent,
+      'completedAt': instance.completedAt.toIso8601String(),
+      'answers': instance.answers,
+    };

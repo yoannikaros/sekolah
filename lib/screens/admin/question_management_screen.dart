@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../models/chapter_models.dart';
+import '../../models/leaderboard_models.dart';
 import '../../services/chapter_service.dart';
+import '../../services/leaderboard_service.dart';
 
 class QuestionManagementScreen extends StatefulWidget {
   final Chapter chapter;
@@ -17,16 +19,327 @@ class QuestionManagementScreen extends StatefulWidget {
   State<QuestionManagementScreen> createState() => _QuestionManagementScreenState();
 }
 
-class _QuestionManagementScreenState extends State<QuestionManagementScreen> {
+class _QuestionManagementScreenState extends State<QuestionManagementScreen> with SingleTickerProviderStateMixin {
   final ChapterService _chapterService = ChapterService();
+  final LeaderboardService _leaderboardService = LeaderboardService();
+  late TabController _tabController;
+  
   List<Question> _questions = [];
-  bool _isLoading = true;
+  bool _isLoading = false;
   String _searchQuery = '';
+  
+  // Leaderboard related state
+  ClassLeaderboard? _classLeaderboard;
+  List<GameBadge> _availableBadges = [];
+  bool _isLoadingLeaderboard = false;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadQuestions();
+    _loadLeaderboardData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildQuestionsTab() {
+    return Column(
+      children: [
+        // Quiz Info & Search Bar
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.orange[600],
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Quiz Info
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.quiz, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${widget.chapter.title} • ${widget.chapter.subjectName}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildInfoChip(
+                          icon: Icons.help_outline,
+                          label: '${_questions.length} Soal',
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildInfoChip(
+                          icon: Icons.star_outline,
+                          label: '${_questions.fold<int>(0, (sum, q) => sum + q.points)} Poin',
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Search Bar
+              TextField(
+                onChanged: (value) => setState(() => _searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: 'Cari soal...',
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Content
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _filteredQuestions.isEmpty
+                  ? _buildEmptyState()
+                  : _buildQuestionList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLeaderboardTab() {
+    if (_isLoadingLeaderboard) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_classLeaderboard == null || _classLeaderboard!.entries.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.leaderboard,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Belum ada data leaderboard',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Siswa perlu mengerjakan quiz untuk muncul di leaderboard',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadLeaderboardData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Class Statistics
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.class_, color: Colors.orange[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Statistik Kelas: ${_classLeaderboard!.classCodeName}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          'Total Siswa',
+                          '${_classLeaderboard!.totalStudents}',
+                          Icons.people,
+                          Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatCard(
+                          'Rata-rata Skor',
+                          _classLeaderboard!.averageScore.toStringAsFixed(1),
+                          Icons.trending_up,
+                          Colors.green,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatCard(
+                          'Total Quiz',
+                          '${_classLeaderboard!.totalQuizzes}',
+                          Icons.quiz,
+                          Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Leaderboard List
+          Text(
+            'Peringkat Siswa',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 8),
+          
+          ...List.generate(_classLeaderboard!.entries.length, (index) {
+            final entry = _classLeaderboard!.entries[index];
+            return _buildLeaderboardCard(entry, index);
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadgesTab() {
+    if (_isLoadingLeaderboard) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_availableBadges.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.emoji_events,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Belum ada badge tersedia',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadLeaderboardData,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text(
+            'Badge Tersedia',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Badge yang bisa diraih siswa berdasarkan pencapaian mereka',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          ...List.generate(_availableBadges.length, (index) {
+            final badge = _availableBadges[index];
+            return _buildBadgeCard(badge);
+          }),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _loadLeaderboardData() async {
+    setState(() => _isLoadingLeaderboard = true);
+    try {
+      // Get class code from chapter
+      final classCodeId = widget.chapter.classCode; // Assuming this contains the class code ID
+      
+      // Load leaderboard and badges
+      final leaderboard = await _leaderboardService.getClassLeaderboard(classCodeId);
+      final badges = await _leaderboardService.getAvailableBadges();
+      
+      setState(() {
+        _classLeaderboard = leaderboard;
+        _availableBadges = badges;
+        _isLoadingLeaderboard = false;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading leaderboard data: $e');
+      }
+      setState(() => _isLoadingLeaderboard = false);
+    }
   }
 
   Future<void> _loadQuestions() async {
@@ -93,102 +406,248 @@ class _QuestionManagementScreenState extends State<QuestionManagementScreen> {
         backgroundColor: Colors.orange[600],
         foregroundColor: Colors.white,
         elevation: 0,
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(icon: Icon(Icons.quiz), text: 'Soal'),
+            Tab(icon: Icon(Icons.leaderboard), text: 'Leaderboard'),
+            Tab(icon: Icon(Icons.emoji_events), text: 'Badge'),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // Quiz Info & Search Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange[600],
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
+          _buildQuestionsTab(),
+          _buildLeaderboardTab(),
+          _buildBadgesTab(),
+        ],
+      ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton(
+              onPressed: () => _showQuestionDialog(),
+              backgroundColor: Colors.orange[600],
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-            child: Column(
-              children: [
-                // Quiz Info
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.quiz, color: Colors.white, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              '${widget.chapter.title} • ${widget.chapter.subjectName}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _buildInfoChip(
-                            icon: Icons.help_outline,
-                            label: '${_questions.length} Soal',
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 8),
-                          _buildInfoChip(
-                            icon: Icons.star_outline,
-                            label: '${_questions.fold<int>(0, (sum, q) => sum + q.points)} Poin',
-                            color: Colors.white,
-                          ),
-                        ],
-                      ),
-                    ],
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeaderboardCard(LeaderboardEntry entry, int index) {
+    Color rankColor = Colors.grey;
+    IconData rankIcon = Icons.person;
+    
+    if (entry.rank == 1) {
+      rankColor = Colors.amber;
+      rankIcon = Icons.emoji_events;
+    } else if (entry.rank == 2) {
+      rankColor = Colors.grey[400]!;
+      rankIcon = Icons.emoji_events;
+    } else if (entry.rank == 3) {
+      rankColor = Colors.brown;
+      rankIcon = Icons.emoji_events;
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: rankColor.withValues(alpha: 0.2),
+          child: entry.rank <= 3
+              ? Icon(rankIcon, color: rankColor)
+              : Text(
+                  '${entry.rank}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: rankColor,
                   ),
                 ),
-                
-                const SizedBox(height: 16),
-                
-                // Search Bar
-                TextField(
-                  onChanged: (value) => setState(() => _searchQuery = value),
-                  decoration: InputDecoration(
-                    hintText: 'Cari soal...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
+        ),
+        title: Text(
+          entry.studentName,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Skor: ${entry.totalScore} • Akurasi: ${entry.accuracy.toStringAsFixed(1)}%'),
+            if (entry.earnedBadgeIds.isNotEmpty)
+              Text(
+                '${entry.earnedBadgeIds.length} Badge',
+                style: TextStyle(
+                  color: Colors.orange[600],
+                  fontSize: 12,
+                ),
+              ),
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '${entry.totalQuizzes} Quiz',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (entry.streak > 0)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.local_fire_department,
+                    size: 12,
+                    color: Colors.orange[600],
+                  ),
+                  Text(
+                    '${entry.streak}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.orange[600],
                     ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadgeCard(GameBadge badge) {
+    Color badgeColor = _getBadgeColor(badge.rarity);
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: badgeColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
+          ),
+          child: Icon(
+            _getBadgeIcon(badge.iconName),
+            color: badgeColor,
+            size: 24,
+          ),
+        ),
+        title: Text(
+          badge.name,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(badge.description),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    badge.rarity.toString().split('.').last.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: badgeColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${badge.points} poin',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
                   ),
                 ),
               ],
             ),
-          ),
-          
-          // Content
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredQuestions.isEmpty
-                    ? _buildEmptyState()
-                    : _buildQuestionList(),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showQuestionDialog(),
-        backgroundColor: Colors.orange[600],
-        child: const Icon(Icons.add, color: Colors.white),
+          ],
+        ),
       ),
     );
+  }
+
+  Color _getBadgeColor(BadgeRarity rarity) {
+    switch (rarity) {
+      case BadgeRarity.common:
+        return Colors.grey;
+      case BadgeRarity.uncommon:
+        return Colors.green;
+      case BadgeRarity.rare:
+        return Colors.blue;
+      case BadgeRarity.epic:
+        return Colors.purple;
+      case BadgeRarity.legendary:
+        return Colors.orange;
+    }
+  }
+
+  IconData _getBadgeIcon(String iconName) {
+    switch (iconName) {
+      case 'star':
+        return Icons.star;
+      case 'emoji_events':
+        return Icons.emoji_events;
+      case 'local_fire_department':
+        return Icons.local_fire_department;
+      case 'gps_fixed':
+        return Icons.gps_fixed;
+      case 'school':
+        return Icons.school;
+      case 'speed':
+        return Icons.speed;
+      case 'trending_up':
+        return Icons.trending_up;
+      default:
+        return Icons.emoji_events;
+    }
   }
 
   Widget _buildInfoChip({

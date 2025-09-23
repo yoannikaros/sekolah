@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 part 'chapter_models.g.dart';
 
@@ -62,20 +63,70 @@ class Chapter {
 
   factory Chapter.fromJson(Map<String, dynamic> json) {
     try {
-      return _$ChapterFromJson(json);
+      // Ensure ID is always present from Firebase document ID
+      final id = json['id'] as String? ?? '';
+      if (id.isEmpty) {
+        if (kDebugMode) {
+          print('WARNING: Chapter ID is missing from JSON data!');
+          print('JSON data: $json');
+        }
+        throw Exception('Chapter ID is required but missing from JSON data');
+      }
+      
+      // Create a copy of json with guaranteed ID
+      final jsonWithId = Map<String, dynamic>.from(json);
+      jsonWithId['id'] = id;
+      
+      return _$ChapterFromJson(jsonWithId);
     } catch (e) {
       if (kDebugMode) {
         print('Error parsing Chapter from JSON: $e');
         print('JSON data: $json');
       }
+      
+      // Fallback parsing with better ID handling
+      final id = json['id'] as String? ?? '';
+      if (id.isEmpty) {
+        if (kDebugMode) {
+          print('CRITICAL: Chapter ID is empty in fallback parsing!');
+        }
+        throw Exception('Chapter ID cannot be empty');
+      }
+      
+      // Parse dates safely
+      DateTime createdAt = DateTime.now();
+      DateTime updatedAt = DateTime.now();
+      
+      try {
+        if (json['createdAt'] != null) {
+          if (json['createdAt'] is String) {
+            createdAt = DateTime.parse(json['createdAt']);
+          } else if (json['createdAt'] is Timestamp) {
+            createdAt = (json['createdAt'] as Timestamp).toDate();
+          }
+        }
+        
+        if (json['updatedAt'] != null) {
+          if (json['updatedAt'] is String) {
+            updatedAt = DateTime.parse(json['updatedAt']);
+          } else if (json['updatedAt'] is Timestamp) {
+            updatedAt = (json['updatedAt'] as Timestamp).toDate();
+          }
+        }
+      } catch (dateError) {
+        if (kDebugMode) {
+          print('Error parsing dates, using current time: $dateError');
+        }
+      }
+      
       return Chapter(
-        id: json['id'] as String? ?? '',
+        id: id,
         title: json['title'] as String? ?? 'Unknown Chapter',
         description: json['description'] as String?,
         subjectName: json['subjectName'] as String? ?? '',
         classCode: json['classCode'] as String? ?? '',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        createdAt: createdAt,
+        updatedAt: updatedAt,
         isActive: json['isActive'] as bool? ?? true,
         sortOrder: json['sortOrder'] as int?,
       );
@@ -142,9 +193,18 @@ class Quiz {
         print('Error parsing Quiz from JSON: $e');
         print('JSON data: $json');
       }
+      // Fallback parsing with better ID and chapterId handling
+      final id = json['id'] as String? ?? '';
+      final chapterId = json['chapterId'] as String? ?? '';
+      
+      if (kDebugMode) {
+        if (id.isEmpty) print('WARNING: Quiz ID is empty in JSON data!');
+        if (chapterId.isEmpty) print('WARNING: Quiz chapterId is empty in JSON data!');
+      }
+      
       return Quiz(
-        id: json['id'] as String? ?? '',
-        chapterId: json['chapterId'] as String? ?? '',
+        id: id,
+        chapterId: chapterId,
         title: json['title'] as String? ?? 'Unknown Quiz',
         createdDate: DateTime.now(),
         startDateTime: DateTime.now(),
@@ -328,4 +388,48 @@ class QuizSummary {
       _$QuizSummaryFromJson(json);
 
   Map<String, dynamic> toJson() => _$QuizSummaryToJson(this);
+}
+
+// Model untuk jawaban user
+@JsonSerializable()
+class UserAnswer {
+  final String questionId;
+  final int selectedAnswerIndex;
+  final bool isCorrect;
+  final int timeSpent; // in seconds
+
+  UserAnswer({
+    required this.questionId,
+    required this.selectedAnswerIndex,
+    required this.isCorrect,
+    required this.timeSpent,
+  });
+
+  factory UserAnswer.fromJson(Map<String, dynamic> json) => _$UserAnswerFromJson(json);
+  Map<String, dynamic> toJson() => _$UserAnswerToJson(this);
+}
+
+// Model untuk hasil quiz
+@JsonSerializable()
+class QuizResult {
+  final String quizId;
+  final int score;
+  final int totalQuestions;
+  final int correctAnswers;
+  final int timeSpent; // in seconds
+  final DateTime completedAt;
+  final List<UserAnswer> answers;
+
+  QuizResult({
+    required this.quizId,
+    required this.score,
+    required this.totalQuestions,
+    required this.correctAnswers,
+    required this.timeSpent,
+    required this.completedAt,
+    required this.answers,
+  });
+
+  factory QuizResult.fromJson(Map<String, dynamic> json) => _$QuizResultFromJson(json);
+  Map<String, dynamic> toJson() => _$QuizResultToJson(this);
 }

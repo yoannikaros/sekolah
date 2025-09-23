@@ -1,0 +1,52 @@
+<svg width="300" height="300" viewBox="0 0 300 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="300" fill="#F0F9FF"/>
+  
+  <!-- Laptop -->
+  <rect x="80" y="150" width="140" height="90" fill="#1F2937" rx="8"/>
+  <rect x="85" y="155" width="130" height="75" fill="#000000" rx="4"/>
+  <rect x="90" y="160" width="120" height="65" fill="#FFFFFF" rx="2"/>
+  
+  <!-- Screen content -->
+  <rect x="95" y="165" width="110" height="8" fill="#4F46E5" rx="4"/>
+  <rect x="95" y="180" width="80" height="4" fill="#9CA3AF" rx="2"/>
+  <rect x="95" y="190" width="90" height="4" fill="#9CA3AF" rx="2"/>
+  <rect x="95" y="200" width="70" height="4" fill="#9CA3AF" rx="2"/>
+  
+  <!-- Video play button -->
+  <circle cx="150" cy="195" r="15" fill="#EF4444"/>
+  <polygon points="145,188 145,202 158,195" fill="#FFFFFF"/>
+  
+  <!-- Laptop base -->
+  <rect x="75" y="240" width="150" height="8" fill="#374151" rx="4"/>
+  
+  <!-- Student -->
+  <circle cx="150" cy="120" r="20" fill="#FDE68A"/>
+  <rect x="135" y="135" width="30" height="35" fill="#3B82F6" rx="15"/>
+  
+  <!-- Arms -->
+  <rect x="125" y="145" width="15" height="4" fill="#FDE68A" rx="2"/>
+  <rect x="160" y="145" width="15" height="4" fill="#FDE68A" rx="2"/>
+  
+  <!-- Books stack -->
+  <rect x="30" y="200" width="25" height="4" fill="#EF4444" rx="2"/>
+  <rect x="32" y="195" width="25" height="4" fill="#10B981" rx="2"/>
+  <rect x="34" y="190" width="25" height="4" fill="#F59E0B" rx="2"/>
+  
+  <!-- Coffee cup -->
+  <rect x="240" y="210" width="15" height="20" fill="#FFFFFF" rx="2" stroke="#9CA3AF" stroke-width="1"/>
+  <rect x="255" y="215" width="4" height="8" fill="none" stroke="#9CA3AF" stroke-width="1" rx="2"/>
+  
+  <!-- Floating elements -->
+  <circle cx="60" cy="80" r="8" fill="#8B5CF6"/>
+  <rect x="56" y="76" width="8" height="8" fill="#FFFFFF" rx="1"/>
+  
+  <circle cx="240" cy="100" r="6" fill="#10B981"/>
+  <polygon points="237,97 237,103 243,100" fill="#FFFFFF"/>
+  
+  <!-- WiFi signal -->
+  <path d="M270 60 Q275 55 280 60" stroke="#4F46E5" stroke-width="2" fill="none"/>
+  <path d="M268 65 Q275 58 282 65" stroke="#4F46E5" stroke-width="2" fill="none"/>
+  <path d="M266 70 Q275 61 284 70" stroke="#4F46E5" stroke-width="2" fill="none"/>
+  <circle cx="275" cy="75" r="2" fill="#4F46E5"/>
+</svg>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1078947515781",
+    "project_id": "seangkatanmvp",
+    "storage_bucket": "seangkatanmvp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1078947515781:android:54dab6397d49f2c56808ec",
+        "android_client_info": {
+          "package_name": "com.seangkatan.sekolahapps.sekangkatanapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDU3wDwheCIBf4y2THg63BNjn3ivCGrI1w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

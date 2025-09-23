@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:sekangkatanapp/screens/quiz/quiz_result_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
-import '../../services/quiz_service.dart';
-import '../../models/quiz_models.dart';
-import 'quiz_result_screen.dart';
+import '../services/quiz_service.dart';
+import '../models/quiz_models.dart';
 
 class QuizScreen extends StatefulWidget {
   final Quiz quiz;

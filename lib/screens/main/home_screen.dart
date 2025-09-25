@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import '../../services/auth_service.dart';
 import 'quiz_screen.dart';
+import 'social_media_screen.dart';
+import 'student_material_screen.dart';
+import 'student_task_submission_screen.dart';
+import 'event_planner_student_screen.dart';
+import '../chat/chat_room_list_screen.dart';
+import 'ai_chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,10 +20,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final PageController _bannerController = PageController();
   int _currentBannerIndex = 0;
+  final AuthService _authService = AuthService();
 
   final List<BannerData> _banners = [
     BannerData(
-      title: "Selamat Datang di Seangkatan.id",
+      title: "Selamat Datang",
       subtitle: "Platform belajar terbaik untuk siswa Indonesia",
       color: const Color(0xFF4F46E5),
       icon: LucideIcons.graduationCap,
@@ -140,11 +148,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               borderRadius: BorderRadius.circular(25),
             ),
-            child: const Icon(
-              LucideIcons.user,
-              color: Colors.white,
-              size: 24,
-            ),
+            child: const Icon(LucideIcons.user, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 15),
           Expanded(
@@ -232,11 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            banner.icon,
-                            color: Colors.white,
-                            size: 32,
-                          ),
+                          Icon(banner.icon, color: Colors.white, size: 32),
                           const SizedBox(height: 12),
                           Text(
                             banner.title,
@@ -277,9 +277,10 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 8,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: _currentBannerIndex == index
-                    ? const Color(0xFF4F46E5)
-                    : const Color(0xFFE2E8F0),
+                color:
+                    _currentBannerIndex == index
+                        ? const Color(0xFF4F46E5)
+                        : const Color(0xFFE2E8F0),
                 shape: BoxShape.circle,
               ),
             ),
@@ -308,25 +309,50 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildQuickActionCard(
-                  "Kelas Live",
+                  "Tugas Kelas",
                   LucideIcons.video,
                   const Color(0xFF3B82F6),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (context) => const StudentTaskSubmissionScreen(),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionCard(
-                  "Latihan Soal",
+                  "Materi Kelas",
                   LucideIcons.fileText,
                   const Color(0xFF10B981),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StudentMaterialScreen(),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionCard(
-                  "Diskusi",
-                  LucideIcons.messageCircle,
-                  const Color(0xFFF59E0B),
+                  "Social Media",
+                  LucideIcons.users,
+                  const Color(0xFF8B5CF6),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SocialMediaScreen(),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -335,6 +361,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   "Ranking",
                   LucideIcons.trophy,
                   const Color(0xFFEF4444),
+                  onTap: () {
+                    // TODO: Navigate to ranking screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Fitur Ranking akan segera hadir!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
@@ -344,46 +379,89 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQuickActionCard(String title, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF000000).withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
+  Widget _buildQuickActionCard(
+    String title,
+    IconData icon,
+    Color color, {
+    VoidCallback? onTap,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          splashColor: color.withValues(alpha: 0.1),
+          highlightColor: color.withValues(alpha: 0.05),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFF1F5F9), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF000000).withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: color.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 20,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.8, end: 1.0),
+                  duration: const Duration(milliseconds: 300),
+                  builder: (context, scale, child) {
+                    return Transform.scale(
+                      scale: scale,
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              color.withValues(alpha: 0.15),
+                              color.withValues(alpha: 0.08),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: color.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(icon, color: color, size: 22),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1E293B),
+                    letterSpacing: -0.2,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF64748B),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -460,7 +538,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (menuItem.badge != null) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF59E0B),
                                 borderRadius: BorderRadius.circular(12),
@@ -483,9 +564,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: menuItem.isAvailable 
-                              ? const Color(0xFF1E293B)
-                              : const Color(0xFF94A3B8),
+                          color:
+                              menuItem.isAvailable
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFF94A3B8),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -494,9 +576,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           menuItem.description,
                           style: GoogleFonts.poppins(
                             fontSize: 11,
-                            color: menuItem.isAvailable 
-                                ? const Color(0xFF64748B)
-                                : const Color(0xFF94A3B8),
+                            color:
+                                menuItem.isAvailable
+                                    ? const Color(0xFF64748B)
+                                    : const Color(0xFF94A3B8),
                             height: 1.3,
                           ),
                           maxLines: 3,
@@ -572,7 +655,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActivityItem(String title, String time, IconData icon, Color color) {
+  Widget _buildActivityItem(
+    String title,
+    String time,
+    IconData icon,
+    Color color,
+  ) {
     return Row(
       children: [
         Container(
@@ -582,11 +670,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 20,
-          ),
+          child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -615,15 +699,46 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _handleMenuTap(String menuName) {
+  void _handleMenuTap(String menuName) async {
     switch (menuName) {
+      case "Wali Kelas Virtual 0.1":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AIChatScreen()),
+        );
+        break;
       case "Quiz Interaktif Dasar":
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const QuizScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const QuizScreen()),
         );
+        break;
+      case "Room Chat Kelas":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ChatRoomListScreen()),
+        );
+        break;
+      case "Event Planner (Lite)":
+        // Get saved class code from Firebase user profile
+        String? savedClassCode;
+        try {
+          final userProfile = await _authService.getCurrentUserProfile();
+          savedClassCode = userProfile?.classCode;
+        } catch (e) {
+          debugPrint('Error retrieving class code: $e');
+        }
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) =>
+                      EventPlannerStudentScreen(classCode: savedClassCode),
+            ),
+          );
+        }
         break;
       default:
         // Handle other menu items

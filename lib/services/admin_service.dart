@@ -1747,4 +1747,341 @@ class AdminService {
       return [];
     }
   }
+
+  // Task Management CRUD Operations
+  Future<String?> createTask(AdminTask task) async {
+    try {
+      final taskData = {
+        'tanggalDibuat': task.tanggalDibuat.toIso8601String(),
+        'kodeKelas': task.kodeKelas,
+        'mataPelajaran': task.mataPelajaran,
+        'judul': task.judul,
+        'deskripsi': task.deskripsi,
+        'linkSoal': task.linkSoal,
+        'tanggalDibuka': task.tanggalDibuka.toIso8601String(),
+        'tanggalBerakhir': task.tanggalBerakhir.toIso8601String(),
+        'linkPdf': task.linkPdf,
+        'komentar': task.komentar.map((comment) => comment.toJson()).toList(),
+        'submissions': task.submissions.map((submission) => submission.toJson()).toList(),
+        'createdBy': task.createdBy,
+        'createdAt': task.createdAt.toIso8601String(),
+        'updatedAt': task.updatedAt.toIso8601String(),
+        'isActive': task.isActive,
+      };
+      
+      final docRef = await _firestore.collection('admin_tasks').add(taskData);
+      if (kDebugMode) {
+        print('Task created successfully with ID: ${docRef.id}');
+      }
+      return docRef.id;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error creating task: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<bool> updateTask(String id, AdminTask task) async {
+    try {
+      final taskData = {
+        'tanggalDibuat': task.tanggalDibuat.toIso8601String(),
+        'kodeKelas': task.kodeKelas,
+        'mataPelajaran': task.mataPelajaran,
+        'judul': task.judul,
+        'deskripsi': task.deskripsi,
+        'linkSoal': task.linkSoal,
+        'tanggalDibuka': task.tanggalDibuka.toIso8601String(),
+        'tanggalBerakhir': task.tanggalBerakhir.toIso8601String(),
+        'linkPdf': task.linkPdf,
+        'komentar': task.komentar.map((comment) => comment.toJson()).toList(),
+        'submissions': task.submissions.map((submission) => submission.toJson()).toList(),
+        'updatedAt': DateTime.now().toIso8601String(),
+        'isActive': task.isActive,
+      };
+      
+      await _firestore.collection('admin_tasks').doc(id).update(taskData);
+      if (kDebugMode) {
+        print('Task updated successfully');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating task: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> deleteTask(String id) async {
+    try {
+      await _firestore.collection('admin_tasks').doc(id).update({
+        'isActive': false,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      if (kDebugMode) {
+        print('Task deleted successfully');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting task: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<List<AdminTask>> getAllTasks() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('admin_tasks')
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final tasks = <AdminTask>[];
+      for (final doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          
+          // Parse dates safely
+          if (data['tanggalDibuat'] is String) {
+            data['tanggalDibuat'] = DateTime.parse(data['tanggalDibuat']);
+          }
+          if (data['tanggalDibuka'] is String) {
+            data['tanggalDibuka'] = DateTime.parse(data['tanggalDibuka']);
+          }
+          if (data['tanggalBerakhir'] is String) {
+            data['tanggalBerakhir'] = DateTime.parse(data['tanggalBerakhir']);
+          }
+          if (data['createdAt'] is String) {
+            data['createdAt'] = DateTime.parse(data['createdAt']);
+          }
+          if (data['updatedAt'] is String) {
+            data['updatedAt'] = DateTime.parse(data['updatedAt']);
+          }
+          
+          // Parse comments
+          if (data['komentar'] is List) {
+            final commentsList = <TaskComment>[];
+            for (final commentData in data['komentar']) {
+              if (commentData is Map<String, dynamic>) {
+                if (commentData['createdAt'] is String) {
+                  commentData['createdAt'] = DateTime.parse(commentData['createdAt']);
+                }
+                commentsList.add(TaskComment.fromJson(commentData));
+              }
+            }
+            data['komentar'] = commentsList;
+          }
+          
+          // Parse submissions
+          if (data['submissions'] is List) {
+            final submissionsList = <StudentSubmission>[];
+            for (final submissionData in data['submissions']) {
+              if (submissionData is Map<String, dynamic>) {
+                if (submissionData['submittedAt'] is String) {
+                  submissionData['submittedAt'] = DateTime.parse(submissionData['submittedAt']);
+                }
+                if (submissionData['gradedAt'] is String) {
+                  submissionData['gradedAt'] = DateTime.parse(submissionData['gradedAt']);
+                }
+                submissionsList.add(StudentSubmission.fromJson(submissionData));
+              }
+            }
+            data['submissions'] = submissionsList;
+          } else {
+            data['submissions'] = <StudentSubmission>[];
+          }
+          
+          // Parse submissions
+          if (data['submissions'] is List) {
+            final submissionsList = <StudentSubmission>[];
+            for (final submissionData in data['submissions']) {
+              if (submissionData is Map<String, dynamic>) {
+                if (submissionData['submittedAt'] is String) {
+                  submissionData['submittedAt'] = DateTime.parse(submissionData['submittedAt']);
+                }
+                if (submissionData['gradedAt'] is String) {
+                  submissionData['gradedAt'] = DateTime.parse(submissionData['gradedAt']);
+                }
+                submissionsList.add(StudentSubmission.fromJson(submissionData));
+              }
+            }
+            data['submissions'] = submissionsList;
+          } else {
+            data['submissions'] = <StudentSubmission>[];
+          }
+          
+          final task = AdminTask.fromJson(data);
+          tasks.add(task);
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error parsing task document ${doc.id}: $e');
+          }
+        }
+      }
+
+      return tasks;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching tasks: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<AdminTask?> getTaskById(String id) async {
+    try {
+      final doc = await _firestore.collection('admin_tasks').doc(id).get();
+      
+      if (!doc.exists) return null;
+      
+      final data = doc.data()!;
+      data['id'] = doc.id;
+      
+      // Parse dates safely
+      if (data['tanggalDibuat'] is String) {
+        data['tanggalDibuat'] = DateTime.parse(data['tanggalDibuat']);
+      }
+      if (data['tanggalDibuka'] is String) {
+        data['tanggalDibuka'] = DateTime.parse(data['tanggalDibuka']);
+      }
+      if (data['tanggalBerakhir'] is String) {
+        data['tanggalBerakhir'] = DateTime.parse(data['tanggalBerakhir']);
+      }
+      if (data['createdAt'] is String) {
+        data['createdAt'] = DateTime.parse(data['createdAt']);
+      }
+      if (data['updatedAt'] is String) {
+        data['updatedAt'] = DateTime.parse(data['updatedAt']);
+      }
+      
+      // Parse comments
+      if (data['komentar'] is List) {
+        final commentsList = <TaskComment>[];
+        for (final commentData in data['komentar']) {
+          if (commentData is Map<String, dynamic>) {
+            if (commentData['createdAt'] is String) {
+              commentData['createdAt'] = DateTime.parse(commentData['createdAt']);
+            }
+            commentsList.add(TaskComment.fromJson(commentData));
+          }
+        }
+        data['komentar'] = commentsList;
+      }
+      
+      // Parse submissions
+      if (data['submissions'] is List) {
+        final submissionsList = <StudentSubmission>[];
+        for (final submissionData in data['submissions']) {
+          if (submissionData is Map<String, dynamic>) {
+            if (submissionData['submittedAt'] is String) {
+              submissionData['submittedAt'] = DateTime.parse(submissionData['submittedAt']);
+            }
+            if (submissionData['gradedAt'] is String) {
+              submissionData['gradedAt'] = DateTime.parse(submissionData['gradedAt']);
+            }
+            submissionsList.add(StudentSubmission.fromJson(submissionData));
+          }
+        }
+        data['submissions'] = submissionsList;
+      } else {
+        data['submissions'] = <StudentSubmission>[];
+      }
+      
+      return AdminTask.fromJson(data);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching task: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<bool> addTaskComment(String taskId, TaskComment comment) async {
+    try {
+      final task = await getTaskById(taskId);
+      if (task == null) return false;
+      
+      final updatedComments = List<TaskComment>.from(task.komentar);
+      updatedComments.add(comment);
+      
+      final updatedTask = task.copyWith(
+        komentar: updatedComments,
+        updatedAt: DateTime.now(),
+      );
+      
+      return await updateTask(taskId, updatedTask);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error adding task comment: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<List<AdminTask>> getTasksByClassCode(String classCode) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('admin_tasks')
+          .where('isActive', isEqualTo: true)
+          .where('kodeKelas', isEqualTo: classCode)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final tasks = <AdminTask>[];
+      for (final doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          
+          // Parse dates and comments similar to getAllTasks
+          if (data['tanggalDibuat'] is String) {
+            data['tanggalDibuat'] = DateTime.parse(data['tanggalDibuat']);
+          }
+          if (data['tanggalDibuka'] is String) {
+            data['tanggalDibuka'] = DateTime.parse(data['tanggalDibuka']);
+          }
+          if (data['tanggalBerakhir'] is String) {
+            data['tanggalBerakhir'] = DateTime.parse(data['tanggalBerakhir']);
+          }
+          if (data['createdAt'] is String) {
+            data['createdAt'] = DateTime.parse(data['createdAt']);
+          }
+          if (data['updatedAt'] is String) {
+            data['updatedAt'] = DateTime.parse(data['updatedAt']);
+          }
+          
+          if (data['komentar'] is List) {
+            final commentsList = <TaskComment>[];
+            for (final commentData in data['komentar']) {
+              if (commentData is Map<String, dynamic>) {
+                if (commentData['createdAt'] is String) {
+                  commentData['createdAt'] = DateTime.parse(commentData['createdAt']);
+                }
+                commentsList.add(TaskComment.fromJson(commentData));
+              }
+            }
+            data['komentar'] = commentsList;
+          }
+          
+          final task = AdminTask.fromJson(data);
+          tasks.add(task);
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error parsing task document ${doc.id}: $e');
+          }
+        }
+      }
+
+      return tasks;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching tasks by class code: $e');
+      }
+      return [];
+    }
+  }
 }

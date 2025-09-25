@@ -1,1 +1,29 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"seangkatanmvp","appId":"1:1078947515781:android:54dab6397d49f2c56808ec","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"seangkatanmvp","configurations":{"android":"1:1078947515781:android:54dab6397d49f2c56808ec","ios":"1:1078947515781:ios:81118d70f2a27b9b6808ec","macos":"1:1078947515781:ios:81118d70f2a27b9b6808ec","web":"1:1078947515781:web:93b84ebd3a114aa76808ec","windows":"1:1078947515781:web:0920071413fa5bc26808ec"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "seangkatanmvp",
+          "appId": "1:1078947515781:android:54dab6397d49f2c56808ec",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "seangkatanmvp",
+          "configurations": {
+            "android": "1:1078947515781:android:54dab6397d49f2c56808ec",
+            "ios": "1:1078947515781:ios:81118d70f2a27b9b6808ec",
+            "macos": "1:1078947515781:ios:81118d70f2a27b9b6808ec",
+            "web": "1:1078947515781:web:93b84ebd3a114aa76808ec",
+            "windows": "1:1078947515781:web:0920071413fa5bc26808ec"
+          }
+        }
+      }
+    }
+  }
+}

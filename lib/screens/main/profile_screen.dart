@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,6 +24,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   User? _currentUser;
   bool _isLoading = false;
+  String? _currentClassCode; // Add this to store current class code
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (_currentUser != null) {
       _nameController.text = _currentUser!.displayName ?? '';
     }
+    _loadUserProfile();
   }
 
   @override
@@ -43,25 +46,100 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  // Load user profile from Firebase
+  Future<void> _loadUserProfile() async {
+    try {
+      final userProfile = await _authService.getCurrentUserProfile();
+      if (userProfile != null) {
+        setState(() {
+          _currentClassCode = userProfile.classCode;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user profile: $e');
+    }
+  }
+
+  // Update class code in Firebase
   Future<void> _updateClassCode() async {
-    if (_classCodeController.text.trim().isEmpty) {
-      _showSnackBar('Kode kelas tidak boleh kosong', isError: true);
+    final classCode = _classCodeController.text.trim();
+    
+    if (classCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kode kelas tidak boleh kosong'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
-    setState(() => _isLoading = true);
-    
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Memperbarui kode kelas...'),
+          ],
+        ),
+      ),
+    );
+
     try {
-      // Here you would typically save the class code to Firestore or your database
-      // For now, we'll just show a success message
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+      if (kDebugMode) {
+        print('Attempting to update class code: $classCode');
+      }
       
-      _showSnackBar('Kode kelas berhasil diperbarui');
-      _classCodeController.clear();
+      final success = await _authService.updateUserClassCode(classCode);
+      
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+      
+      if (success) {
+        setState(() {
+          _currentClassCode = classCode.toUpperCase();
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Kode kelas berhasil diperbarui'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Kode kelas tidak valid atau tidak aktif. Silakan periksa kembali.'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
     } catch (e) {
-      _showSnackBar('Gagal memperbarui kode kelas: $e', isError: true);
-    } finally {
-      setState(() => _isLoading = false);
+      // Close loading dialog if still open
+      if (mounted) Navigator.of(context).pop();
+      
+      if (kDebugMode) {
+        print('Error updating class code: $e');
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Terjadi kesalahan: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
@@ -345,7 +423,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildMenuItem(
             icon: LucideIcons.graduationCap,
             title: 'Kode Kelas',
-            subtitle: 'Atur kode kelas Anda',
+            subtitle: _currentClassCode != null 
+                ? 'Kelas: $_currentClassCode' 
+                : 'Atur kode kelas Anda',
             onTap: () => _showClassCodeDialog(),
           ),
           const Divider(height: 1),
@@ -507,6 +587,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showClassCodeDialog() {
+    // Pre-fill the controller with current class code if available
+    _classCodeController.text = _currentClassCode ?? '';
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -514,12 +597,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (_currentClassCode != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      LucideIcons.info,
+                      color: Colors.blue.shade600,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Kode kelas saat ini: $_currentClassCode',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             TextField(
               controller: _classCodeController,
-              decoration: const InputDecoration(
-                hintText: 'Masukkan kode kelas',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: _currentClassCode != null 
+                    ? 'Masukkan kode kelas baru' 
+                    : 'Masukkan kode kelas',
+                border: const OutlineInputBorder(),
+                helperText: 'Kosongkan untuk menghapus kode kelas',
               ),
+              textCapitalization: TextCapitalization.characters,
             ),
           ],
         ),
@@ -528,16 +646,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Batal'),
           ),
+          if (_currentClassCode != null)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _removeClassCode();
+              },
+              child: Text(
+                'Hapus',
+                style: TextStyle(color: Colors.red.shade600),
+              ),
+            ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              _updateClassCode();
+              if (_classCodeController.text.trim().isEmpty) {
+                _removeClassCode();
+              } else {
+                _updateClassCode();
+              }
             },
             child: const Text('Simpan'),
           ),
         ],
       ),
     );
+  }
+
+  // Remove class code from Firebase
+  Future<void> _removeClassCode() async {
+    try {
+      final success = await _authService.removeUserClassCode();
+      if (success) {
+        setState(() {
+          _currentClassCode = null;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Kode kelas berhasil dihapus')),
+          );
+          Navigator.of(context).pop();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menghapus kode kelas')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   void _showChangeNameDialog() {

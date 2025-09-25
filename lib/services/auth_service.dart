@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/admin_models.dart';
+import '../models/social_media_models.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -227,5 +228,162 @@ class AuthService {
   // Validate password strength
   static bool isValidPassword(String password) {
     return password.length >= 6;
+  }
+
+  // Get current user profile
+  Future<UserProfile?> getCurrentUserProfile() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final doc = await _firestore.collection('user_profiles').doc(user.uid).get();
+      if (doc.exists) {
+        return UserProfile.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting user profile: $e');
+      }
+      return null;
+    }
+  }
+
+  // Update user class code
+  Future<bool> updateUserClassCode(String classCode) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        if (kDebugMode) {
+          print('Error: No authenticated user found');
+        }
+        return false;
+      }
+
+      // First validate if the class code exists and is active
+      final classCodeQuery = await _firestore
+          .collection('class_codes')
+          .where('code', isEqualTo: classCode.toUpperCase())
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (classCodeQuery.docs.isEmpty) {
+        // Try case-insensitive search
+        final allCodesSnapshot = await _firestore
+            .collection('class_codes')
+            .where('isActive', isEqualTo: true)
+            .get();
+        
+        bool found = false;
+        for (final doc in allCodesSnapshot.docs) {
+          final docData = doc.data();
+          final docCode = docData['code']?.toString().toUpperCase();
+          if (docCode == classCode.toUpperCase()) {
+            found = true;
+            break;
+          }
+        }
+        
+        if (!found) {
+          if (kDebugMode) {
+            print('Error: Class code not found or inactive: $classCode');
+          }
+          return false;
+        }
+      }
+
+      // First check if user profile document exists
+      final userProfileRef = _firestore.collection('user_profiles').doc(user.uid);
+      final userProfileDoc = await userProfileRef.get();
+      
+      if (!userProfileDoc.exists) {
+        if (kDebugMode) {
+          print('User profile document does not exist, creating one...');
+        }
+        // Create user profile document if it doesn't exist
+        await userProfileRef.set({
+          'id': user.uid,
+          'name': user.displayName ?? 'User',
+          'email': user.email,
+          'classCode': classCode.toUpperCase(),
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+          'isActive': true,
+        });
+      } else {
+        // Update existing document
+        await userProfileRef.update({
+          'classCode': classCode.toUpperCase(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      
+      if (kDebugMode) {
+        print('Class code updated successfully: ${classCode.toUpperCase()}');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating class code: $e');
+        print('Stack trace: ${StackTrace.current}');
+      }
+      return false;
+    }
+  }
+
+  // Remove user class code
+  Future<bool> removeUserClassCode() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      await _firestore.collection('user_profiles').doc(user.uid).update({
+        'classCode': null,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error removing class code: $e');
+      }
+      return false;
+    }
+  }
+
+  // Create or update user profile
+  Future<bool> createOrUpdateUserProfile({
+    required String name,
+    String? avatar,
+    String? bio,
+    String? classCode,
+    String? email,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return false;
+
+      final userProfile = UserProfile(
+        id: user.uid,
+        name: name,
+        avatar: avatar,
+        bio: bio,
+        classCode: classCode,
+        email: email ?? user.email,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore.collection('user_profiles').doc(user.uid).set(
+        userProfile.toFirestore(),
+        SetOptions(merge: true),
+      );
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error creating/updating user profile: $e');
+      }
+      return false;
+    }
   }
 }

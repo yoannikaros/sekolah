@@ -6,6 +6,12 @@ import 'admin_schools_screen.dart';
 import 'admin_subjects_screen.dart';
 import 'admin_teachers_screen.dart';
 import 'chapter_management_screen.dart';
+import 'mading_management_screen.dart';
+import 'gallery_management_screen.dart';
+import 'event_planner_management_screen.dart';
+import 'ai_chat_config_screen.dart';
+import 'task_management_screen.dart';
+import 'material_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -282,6 +288,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               childAspectRatio: aspectRatio,
                               children: [
                                 _buildManagementCard(
+                                  'Kelola Materi',
+                                  'Kelola materi pembelajaran dengan video YouTube dan komentar',
+                                  Icons.library_books_rounded,
+                                  const Color(0xFF3F51B5),
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const MaterialManagementScreen(),
+                                    ),
+                                  ),
+                                ),
+                                _buildManagementCard(
                                   'Kelola Sekolah',
                                   'Tambah, edit, dan hapus data sekolah',
                                   Icons.school_rounded,
@@ -292,6 +312,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                       builder:
                                           (context) =>
                                               const AdminSchoolsScreen(),
+                                    ),
+                                  ),
+                                ),
+                                _buildManagementCard(
+                                  'Kelola Tugas',
+                                  'Kelola tugas siswa dengan tanggal, kelas, dan komentar',
+                                  Icons.assignment_rounded,
+                                  const Color(0xFF673AB7),
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const TaskManagementScreen(),
                                     ),
                                   ),
                                 ),
@@ -362,6 +396,62 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                       builder:
                                           (context) =>
                                               const AdminTeachersScreen(),
+                                    ),
+                                  ),
+                                ),
+                                _buildManagementCard(
+                                  'Kelola Mading Online',
+                                  'Kelola karya gambar/foto tugas dan komentar terkurasi',
+                                  Icons.dashboard_rounded,
+                                  const Color(0xFFFF5722),
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const MadingManagementScreen(),
+                                    ),
+                                  ),
+                                ),
+                                _buildManagementCard(
+                                  'Kelola Galeri Foto',
+                                  'Kelola album kegiatan kelas dengan watermark sekolah',
+                                  Icons.photo_library_rounded,
+                                  const Color(0xFF9C27B0),
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const GalleryManagementScreen(),
+                                    ),
+                                  ),
+                                ),
+                                _buildManagementCard(
+                                  'Event Planner (Lite)',
+                                  'Jadwal pertemuan orang tua, lomba antar kelas atau tantangan sekolah lain',
+                                  Icons.event_rounded,
+                                  const Color(0xFF795548),
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const EventPlannerManagementScreen(),
+                                    ),
+                                  ),
+                                ),
+                                _buildManagementCard(
+                                  'Konfigurasi AI Chat',
+                                  'Kelola API ChatGPT dan pengaturan AI untuk siswa',
+                                  Icons.smart_toy_rounded,
+                                  const Color(0xFF00BCD4),
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const AIChatConfigScreen(),
                                     ),
                                   ),
                                 ),

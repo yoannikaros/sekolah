@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/chapter_models.dart';
 import '../../services/chapter_service.dart';
+import '../../services/auth_service.dart';
 import 'quiz_detail_screen.dart';
 import 'class_code_screen.dart';
 
@@ -17,6 +17,7 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen>
     with TickerProviderStateMixin {
   final ChapterService _chapterService = ChapterService();
+  final AuthService _authService = AuthService();
   
   List<Chapter> _chapters = [];
   bool _isLoading = true;
@@ -66,9 +67,9 @@ class _QuizScreenState extends State<QuizScreen>
 
   Future<void> _checkClassCodeAndLoadChapters() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedClassCodeId = prefs.getString('class_code_id');
-      final savedClassName = prefs.getString('class_name');
+      final userProfile = await _authService.getCurrentUserProfile();
+      final savedClassCodeId = userProfile?.classCode;
+      final savedClassName = userProfile?.name;
       
       if (savedClassCodeId == null || savedClassCodeId.isEmpty) {
         // No class code found, redirect to class code input

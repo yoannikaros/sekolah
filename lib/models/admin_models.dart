@@ -624,3 +624,176 @@ class StudentAnswer {
   factory StudentAnswer.fromJson(Map<String, dynamic> json) => _$StudentAnswerFromJson(json);
   Map<String, dynamic> toJson() => _$StudentAnswerToJson(this);
 }
+
+// Model untuk manajemen tugas admin
+@JsonSerializable()
+class AdminTask {
+  final String id;
+  final DateTime tanggalDibuat;
+  final String kodeKelas;
+  final String mataPelajaran;
+  final String judul;
+  final String deskripsi;
+  final String? linkSoal;
+  final DateTime tanggalDibuka;
+  final DateTime tanggalBerakhir;
+  final String? linkPdf;
+  final List<TaskComment> komentar;
+  final List<StudentSubmission> submissions; // Daftar pengumpulan siswa
+  final String createdBy; // ID admin/guru yang membuat
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final bool isActive;
+
+  AdminTask({
+    required this.id,
+    required this.tanggalDibuat,
+    required this.kodeKelas,
+    required this.mataPelajaran,
+    required this.judul,
+    required this.deskripsi,
+    this.linkSoal,
+    required this.tanggalDibuka,
+    required this.tanggalBerakhir,
+    this.linkPdf,
+    this.komentar = const [],
+    this.submissions = const [],
+    required this.createdBy,
+    required this.createdAt,
+    required this.updatedAt,
+    this.isActive = true,
+  });
+
+  AdminTask copyWith({
+    String? id,
+    DateTime? tanggalDibuat,
+    String? kodeKelas,
+    String? mataPelajaran,
+    String? judul,
+    String? deskripsi,
+    String? linkSoal,
+    DateTime? tanggalDibuka,
+    DateTime? tanggalBerakhir,
+    String? linkPdf,
+    List<TaskComment>? komentar,
+    List<StudentSubmission>? submissions,
+    String? createdBy,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isActive,
+  }) {
+    return AdminTask(
+      id: id ?? this.id,
+      tanggalDibuat: tanggalDibuat ?? this.tanggalDibuat,
+      kodeKelas: kodeKelas ?? this.kodeKelas,
+      mataPelajaran: mataPelajaran ?? this.mataPelajaran,
+      judul: judul ?? this.judul,
+      deskripsi: deskripsi ?? this.deskripsi,
+      linkSoal: linkSoal ?? this.linkSoal,
+      tanggalDibuka: tanggalDibuka ?? this.tanggalDibuka,
+      tanggalBerakhir: tanggalBerakhir ?? this.tanggalBerakhir,
+      linkPdf: linkPdf ?? this.linkPdf,
+      komentar: komentar ?? this.komentar,
+      submissions: submissions ?? this.submissions,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
+  factory AdminTask.fromJson(Map<String, dynamic> json) => _$AdminTaskFromJson(json);
+  Map<String, dynamic> toJson() => _$AdminTaskToJson(this);
+}
+
+// Model untuk komentar tugas
+@JsonSerializable()
+class TaskComment {
+  final String id;
+  final String taskId;
+  final String authorId;
+  final String authorName;
+  final String authorType; // 'guru' atau 'murid'
+  final String comment;
+  final DateTime createdAt;
+  final bool isActive;
+
+  TaskComment({
+    required this.id,
+    required this.taskId,
+    required this.authorId,
+    required this.authorName,
+    required this.authorType,
+    required this.comment,
+    required this.createdAt,
+    this.isActive = true,
+  });
+
+  factory TaskComment.fromJson(Map<String, dynamic> json) => _$TaskCommentFromJson(json);
+  Map<String, dynamic> toJson() => _$TaskCommentToJson(this);
+}
+
+// Model untuk pengumpulan tugas siswa
+@JsonSerializable()
+class StudentSubmission {
+  final String id;
+  final String taskId;
+  final String studentId;
+  final String studentName;
+  final String title; // Judul pengumpulan
+  final String description; // Deskripsi pengumpulan
+  final String link; // Link pengumpulan (Google Drive, dll)
+  final DateTime submittedAt;
+  final DateTime? gradedAt;
+  final int? score; // Nilai yang diberikan guru
+  final String? feedback; // Feedback dari guru
+  final bool isActive;
+
+  StudentSubmission({
+    required this.id,
+    required this.taskId,
+    required this.studentId,
+    required this.studentName,
+    required this.title,
+    required this.description,
+    required this.link,
+    required this.submittedAt,
+    this.gradedAt,
+    this.score,
+    this.feedback,
+    this.isActive = true,
+  });
+
+  StudentSubmission copyWith({
+    String? id,
+    String? taskId,
+    String? studentId,
+    String? studentName,
+    String? title,
+    String? description,
+    String? link,
+    DateTime? submittedAt,
+    DateTime? gradedAt,
+    int? score,
+    String? feedback,
+    bool? isActive,
+  }) {
+    return StudentSubmission(
+      id: id ?? this.id,
+      taskId: taskId ?? this.taskId,
+      studentId: studentId ?? this.studentId,
+      studentName: studentName ?? this.studentName,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      link: link ?? this.link,
+      submittedAt: submittedAt ?? this.submittedAt,
+      gradedAt: gradedAt ?? this.gradedAt,
+      score: score ?? this.score,
+      feedback: feedback ?? this.feedback,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
+  factory StudentSubmission.fromJson(Map<String, dynamic> json) => _$StudentSubmissionFromJson(json);
+  Map<String, dynamic> toJson() => _$StudentSubmissionToJson(this);
+}

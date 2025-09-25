@@ -370,3 +370,107 @@ Map<String, dynamic> _$StudentAnswerToJson(StudentAnswer instance) =>
       'score': instance.score,
       'isCorrect': instance.isCorrect,
     };
+
+AdminTask _$AdminTaskFromJson(Map<String, dynamic> json) => AdminTask(
+  id: json['id'] as String,
+  tanggalDibuat: DateTime.parse(json['tanggalDibuat'] as String),
+  kodeKelas: json['kodeKelas'] as String,
+  mataPelajaran: json['mataPelajaran'] as String,
+  judul: json['judul'] as String,
+  deskripsi: json['deskripsi'] as String,
+  linkSoal: json['linkSoal'] as String?,
+  tanggalDibuka: DateTime.parse(json['tanggalDibuka'] as String),
+  tanggalBerakhir: DateTime.parse(json['tanggalBerakhir'] as String),
+  linkPdf: json['linkPdf'] as String?,
+  komentar:
+      (json['komentar'] as List<dynamic>?)
+          ?.map((e) => TaskComment.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  submissions:
+      (json['submissions'] as List<dynamic>?)
+          ?.map((e) => StudentSubmission.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  createdBy: json['createdBy'] as String,
+  createdAt: DateTime.parse(json['createdAt'] as String),
+  updatedAt: DateTime.parse(json['updatedAt'] as String),
+  isActive: json['isActive'] as bool? ?? true,
+);
+
+Map<String, dynamic> _$AdminTaskToJson(AdminTask instance) => <String, dynamic>{
+  'id': instance.id,
+  'tanggalDibuat': instance.tanggalDibuat.toIso8601String(),
+  'kodeKelas': instance.kodeKelas,
+  'mataPelajaran': instance.mataPelajaran,
+  'judul': instance.judul,
+  'deskripsi': instance.deskripsi,
+  'linkSoal': instance.linkSoal,
+  'tanggalDibuka': instance.tanggalDibuka.toIso8601String(),
+  'tanggalBerakhir': instance.tanggalBerakhir.toIso8601String(),
+  'linkPdf': instance.linkPdf,
+  'komentar': instance.komentar,
+  'submissions': instance.submissions,
+  'createdBy': instance.createdBy,
+  'createdAt': instance.createdAt.toIso8601String(),
+  'updatedAt': instance.updatedAt.toIso8601String(),
+  'isActive': instance.isActive,
+};
+
+TaskComment _$TaskCommentFromJson(Map<String, dynamic> json) => TaskComment(
+  id: json['id'] as String,
+  taskId: json['taskId'] as String,
+  authorId: json['authorId'] as String,
+  authorName: json['authorName'] as String,
+  authorType: json['authorType'] as String,
+  comment: json['comment'] as String,
+  createdAt: DateTime.parse(json['createdAt'] as String),
+  isActive: json['isActive'] as bool? ?? true,
+);
+
+Map<String, dynamic> _$TaskCommentToJson(TaskComment instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'taskId': instance.taskId,
+      'authorId': instance.authorId,
+      'authorName': instance.authorName,
+      'authorType': instance.authorType,
+      'comment': instance.comment,
+      'createdAt': instance.createdAt.toIso8601String(),
+      'isActive': instance.isActive,
+    };
+
+StudentSubmission _$StudentSubmissionFromJson(Map<String, dynamic> json) =>
+    StudentSubmission(
+      id: json['id'] as String,
+      taskId: json['taskId'] as String,
+      studentId: json['studentId'] as String,
+      studentName: json['studentName'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      link: json['link'] as String,
+      submittedAt: DateTime.parse(json['submittedAt'] as String),
+      gradedAt:
+          json['gradedAt'] == null
+              ? null
+              : DateTime.parse(json['gradedAt'] as String),
+      score: (json['score'] as num?)?.toInt(),
+      feedback: json['feedback'] as String?,
+      isActive: json['isActive'] as bool? ?? true,
+    );
+
+Map<String, dynamic> _$StudentSubmissionToJson(StudentSubmission instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'taskId': instance.taskId,
+      'studentId': instance.studentId,
+      'studentName': instance.studentName,
+      'title': instance.title,
+      'description': instance.description,
+      'link': instance.link,
+      'submittedAt': instance.submittedAt.toIso8601String(),
+      'gradedAt': instance.gradedAt?.toIso8601String(),
+      'score': instance.score,
+      'feedback': instance.feedback,
+      'isActive': instance.isActive,
+    };

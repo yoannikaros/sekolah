@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'dart:async';
@@ -81,21 +82,23 @@ class _QuizPlayScreenState extends State<QuizPlayScreen>
       }
 
       // Debug logging for QuizPlayScreen
-      print('QuizPlayScreen: Loaded ${questions.length} questions');
-      for (int i = 0; i < questions.length; i++) {
-        final question = questions[i];
-        print('QuizPlayScreen: Question $i - ID: ${question.id}');
-        print('QuizPlayScreen: Question $i - Type: ${question.questionType}');
-        print('QuizPlayScreen: Question $i - Text: ${question.questionText}');
-        print('QuizPlayScreen: Question $i - Multiple choice options: ${question.multipleChoiceOptions}');
-        if (question.multipleChoiceOptions != null) {
-          print('QuizPlayScreen: Question $i - Options count: ${question.multipleChoiceOptions!.length}');
-          for (int j = 0; j < question.multipleChoiceOptions!.length; j++) {
-            final option = question.multipleChoiceOptions![j];
-            print('QuizPlayScreen: Question $i - Option $j: ${option.optionText} (correct: ${option.isCorrect})');
+      if (kDebugMode) {
+        print('QuizPlayScreen: Loaded ${questions.length} questions');
+        for (int i = 0; i < questions.length; i++) {
+          final question = questions[i];
+          print('QuizPlayScreen: Question $i - ID: ${question.id}');
+          print('QuizPlayScreen: Question $i - Type: ${question.questionType}');
+          print('QuizPlayScreen: Question $i - Text: ${question.questionText}');
+          print('QuizPlayScreen: Question $i - Multiple choice options: ${question.multipleChoiceOptions}');
+          if (question.multipleChoiceOptions != null) {
+            print('QuizPlayScreen: Question $i - Options count: ${question.multipleChoiceOptions!.length}');
+            for (int j = 0; j < question.multipleChoiceOptions!.length; j++) {
+              final option = question.multipleChoiceOptions![j];
+              print('QuizPlayScreen: Question $i - Option $j: ${option.optionText} (correct: ${option.isCorrect})');
+            }
+          } else {
+            print('QuizPlayScreen: Question $i - multipleChoiceOptions is NULL!');
           }
-        } else {
-          print('QuizPlayScreen: Question $i - multipleChoiceOptions is NULL!');
         }
       }
 
@@ -506,9 +509,11 @@ class _QuizPlayScreenState extends State<QuizPlayScreen>
     final currentQuestion = _questions[_currentQuestionIndex];
     
     // Debug logging for current question
-    print('QuizPlayScreen: Displaying question ${_currentQuestionIndex + 1}');
-    print('QuizPlayScreen: Current question multipleChoiceOptions: ${currentQuestion.multipleChoiceOptions}');
-    print('QuizPlayScreen: Current question type: ${currentQuestion.questionType}');
+    if (kDebugMode) {
+      print('QuizPlayScreen: Displaying question ${_currentQuestionIndex + 1}');
+      print('QuizPlayScreen: Current question multipleChoiceOptions: ${currentQuestion.multipleChoiceOptions}');
+      print('QuizPlayScreen: Current question type: ${currentQuestion.questionType}');
+    }
     
     return FadeTransition(
       opacity: _questionFadeAnimation,

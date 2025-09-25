@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import '../../services/quiz_service.dart';
+import '../../services/auth_service.dart';
 import 'quiz_screen.dart';
 
 class ClassCodeScreen extends StatefulWidget {
@@ -14,6 +14,7 @@ class ClassCodeScreen extends StatefulWidget {
 class _ClassCodeScreenState extends State<ClassCodeScreen> {
   final TextEditingController _codeController = TextEditingController();
   final QuizService _quizService = QuizService();
+  final AuthService _authService = AuthService();
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -62,11 +63,8 @@ class _ClassCodeScreenState extends State<ClassCodeScreen> {
         if (kDebugMode) {
           print('DEBUG: Class code found: ${classCode.toJson()}');
         }
-        // Save class code to local storage
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('class_code_id', classCode.id);
-        await prefs.setString('class_code', classCode.code);
-        await prefs.setString('class_name', classCode.name);
+        // Save class code to Firebase
+        await _authService.updateUserClassCode(classCode.id);
 
         if (mounted) {
           Navigator.of(context).pushReplacement(

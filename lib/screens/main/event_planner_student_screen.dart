@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import '../../models/event_planner_models.dart';
 import '../../services/event_planner_service.dart';
 import '../../services/auth_service.dart';
@@ -74,48 +75,72 @@ class _EventPlannerStudentScreenState extends State<EventPlannerStudentScreen>
     });
 
     try {
+      if (kDebugMode) {
+        print('Loading events for class code: $_currentClassCode');
+      }
+      
       // Get school ID from class code
       await _getSchoolIdFromClassCode();
       
-      // Load class events
-      final classEvents = await _eventPlannerService.getUpcomingEvents(
-        classCode: _currentClassCode,
-        limit: 50,
-      );
-      
-      // Load school events if we have school ID
-      List<EventPlanner> schoolEvents = [];
-      if (_currentSchoolId != null) {
-        schoolEvents = await _eventPlannerService.getVisibleEvents(
-          schoolId: _currentSchoolId!,
-          classCode: _currentClassCode!,
-        );
-        // Filter to only school-wide events
-        schoolEvents = schoolEvents.where((event) => 
-          event.visibility == EventVisibility.school && 
-          event.classCode != _currentClassCode
-        ).toList();
+      if (kDebugMode) {
+        print('School ID for class code $_currentClassCode: $_currentSchoolId');
       }
       
-      // Load public events
-      final publicEvents = await _eventPlannerService.getVisibleEvents(
-        schoolId: _currentSchoolId ?? '',
-        classCode: _currentClassCode!,
-      );
-      // Filter to only public events
-      final filteredPublicEvents = publicEvents.where((event) => 
-        event.visibility == EventVisibility.public
+      // Load all events first (similar to EventPlannerManagementScreen)
+      final allEvents = await _eventPlannerService.getAllEventPlanners();
+      
+      if (kDebugMode) {
+        print('Total events loaded: ${allEvents.length}');
+        for (var event in allEvents) {
+          print('Event: ${event.title}, ClassCode: ${event.classCode}, SchoolId: ${event.schoolId}, Visibility: ${event.visibility}, IsActive: ${event.isActive}');
+        }
+      }
+      
+      // Filter events based on class code and visibility
+      final classEvents = allEvents.where((event) => 
+        event.isActive && (
+          // Events specifically for this class code
+          (event.classCode == _currentClassCode) ||
+          // Events that require this specific class code
+          (event.requiredClassCode == _currentClassCode)
+        )
       ).toList();
+      
+      // Filter school events (same school, but different class or school-wide)
+      final schoolEvents = _currentSchoolId != null && _currentSchoolId!.isNotEmpty ? allEvents.where((event) => 
+        event.isActive &&
+        event.schoolId == _currentSchoolId &&
+        event.visibility == EventVisibility.school &&
+        event.classCode != _currentClassCode
+      ).toList() : <EventPlanner>[];
+      
+      // Filter public events (exclude events already shown in class events)
+      final publicEvents = allEvents.where((event) => 
+        event.isActive && 
+        event.visibility == EventVisibility.public &&
+        event.classCode != _currentClassCode &&
+        event.requiredClassCode != _currentClassCode
+      ).toList();
+      
+      if (kDebugMode) {
+        print('Class events: ${classEvents.length}');
+        print('School events: ${schoolEvents.length}');
+        print('Public events: ${publicEvents.length}');
+      }
       
       setState(() {
         _classEvents = classEvents;
         _schoolEvents = schoolEvents;
-        _publicEvents = filteredPublicEvents;
+        _publicEvents = publicEvents;
         _isLoading = false;
       });
       
       _cardAnimationController.forward();
     } catch (e) {
+      if (kDebugMode) {
+        print('Error loading events: $e');
+      }
+      debugPrint('Error loading events: $e');
       setState(() {
         _isLoading = false;
       });
@@ -134,15 +159,41 @@ class _EventPlannerStudentScreenState extends State<EventPlannerStudentScreen>
   Future<void> _getSchoolIdFromClassCode() async {
     try {
       if (_currentClassCode != null) {
-        // Get ClassCode object to access schoolId
-        final classCodeObj = await _adminService.getClassCodeById(_currentClassCode!);
-        if (classCodeObj != null) {
-          setState(() {
-            _currentSchoolId = classCodeObj.schoolId;
-          });
+        if (kDebugMode) {
+          print('Getting school ID for class code: $_currentClassCode');
+        }
+        
+        // Get all class codes and find the one matching our code
+        final allClassCodes = await _adminService.getAllClassCodes();
+        
+        if (kDebugMode) {
+          print('Available class codes:');
+          for (var cc in allClassCodes) {
+            print('  Code: ${cc.code}, SchoolId: ${cc.schoolId}, IsActive: ${cc.isActive}');
+          }
+        }
+        
+        final matchingClassCode = allClassCodes.firstWhere(
+          (cc) => cc.code == _currentClassCode && cc.isActive,
+          orElse: () => throw Exception('Active class code not found for: $_currentClassCode'),
+        );
+        
+        if (kDebugMode) {
+          print('Found matching class code: ${matchingClassCode.code} with schoolId: ${matchingClassCode.schoolId}');
+        }
+        
+        setState(() {
+          _currentSchoolId = matchingClassCode.schoolId;
+        });
+        
+        if (kDebugMode) {
+          print('Set _currentSchoolId to: $_currentSchoolId');
         }
       }
     } catch (e) {
+      if (kDebugMode) {
+        print('Error getting school ID: $e');
+      }
       debugPrint('Error getting school ID: $e');
     }
   }

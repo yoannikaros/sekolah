@@ -318,7 +318,8 @@ class AdminService {
       final classCodes = querySnapshot.docs
           .map((doc) {
             try {
-              final data = doc.data();
+              final data = Map<String, dynamic>.from(doc.data());
+              
               // Handle different date formats from Firebase
               if (data['createdAt'] is String) {
                 // Already a string, keep as is
@@ -330,7 +331,19 @@ class AdminService {
                 data['createdAt'] = DateTime.now().toIso8601String();
               }
               
-              return ClassCode.fromJson({...data, 'id': doc.id});
+              // Always use Firestore document ID as the id field
+              data['id'] = doc.id;
+              
+              // Handle empty or null schoolId
+              if (data['schoolId'] == null || data['schoolId'] == '') {
+                data['schoolId'] = null;
+              }
+              
+              if (kDebugMode) {
+                print('Processing class code ${doc.id}: code=${data['code']}, schoolId=${data['schoolId']}, isActive=${data['isActive']}');
+              }
+              
+              return ClassCode.fromJson(data);
             } catch (e) {
               if (kDebugMode) {
                 print('Error parsing class code document ${doc.id}: $e');
@@ -1833,79 +1846,85 @@ class AdminService {
 
   Future<List<AdminTask>> getAllTasks() async {
     try {
+      if (kDebugMode) {
+        print('=== STARTING getAllTasks() ===');
+        print('Fetching all tasks from Firebase...');
+      }
+      
+      // First, try to get all tasks without isActive filter to debug
       final querySnapshot = await _firestore
           .collection('admin_tasks')
-          .where('isActive', isEqualTo: true)
           .orderBy('createdAt', descending: true)
           .get();
 
+      if (kDebugMode) {
+        print('=== FIREBASE QUERY RESULT ===');
+        print('Total documents in admin_tasks collection: ${querySnapshot.docs.length}');
+        
+        if (querySnapshot.docs.isEmpty) {
+          print('WARNING: No documents found in admin_tasks collection!');
+          print('This means either:');
+          print('1. No tasks have been created yet');
+          print('2. Collection name is incorrect');
+          print('3. Firebase rules are blocking access');
+        } else {
+          print('=== DOCUMENTS FOUND ===');
+          for (var doc in querySnapshot.docs) {
+            print('Document ID: ${doc.id}');
+            print('Document Data: ${doc.data()}');
+            print('---');
+          }
+        }
+      }
+
       final tasks = <AdminTask>[];
+      if (kDebugMode) {
+        print('=== PROCESSING DOCUMENTS ===');
+        print('Starting to process ${querySnapshot.docs.length} documents...');
+      }
+      
       for (final doc in querySnapshot.docs) {
         try {
           final data = doc.data();
+          
+          if (kDebugMode) {
+            print('Processing document ${doc.id}:');
+            print('  isActive: ${data['isActive']}');
+          }
+          
+          // Check if task is active (include documents that don't have isActive field or have isActive = true)
+          if (data['isActive'] == false) {
+            if (kDebugMode) {
+              print('  -> Skipping inactive task: ${doc.id}');
+            }
+            continue;
+          }
+          
+          if (kDebugMode) {
+            print('  -> Processing active task: ${doc.id}');
+          }
+          
           data['id'] = doc.id;
           
-          // Parse dates safely
-          if (data['tanggalDibuat'] is String) {
-            data['tanggalDibuat'] = DateTime.parse(data['tanggalDibuat']);
-          }
-          if (data['tanggalDibuka'] is String) {
-            data['tanggalDibuka'] = DateTime.parse(data['tanggalDibuka']);
-          }
-          if (data['tanggalBerakhir'] is String) {
-            data['tanggalBerakhir'] = DateTime.parse(data['tanggalBerakhir']);
-          }
-          if (data['createdAt'] is String) {
-            data['createdAt'] = DateTime.parse(data['createdAt']);
-          }
-          if (data['updatedAt'] is String) {
-            data['updatedAt'] = DateTime.parse(data['updatedAt']);
-          }
-          
+          // No need to manually parse dates anymore - the DateTimeConverter handles it
           // Parse comments
           if (data['komentar'] is List) {
             final commentsList = <TaskComment>[];
             for (final commentData in data['komentar']) {
               if (commentData is Map<String, dynamic>) {
-                if (commentData['createdAt'] is String) {
-                  commentData['createdAt'] = DateTime.parse(commentData['createdAt']);
-                }
                 commentsList.add(TaskComment.fromJson(commentData));
               }
             }
             data['komentar'] = commentsList;
-          }
-          
-          // Parse submissions
-          if (data['submissions'] is List) {
-            final submissionsList = <StudentSubmission>[];
-            for (final submissionData in data['submissions']) {
-              if (submissionData is Map<String, dynamic>) {
-                if (submissionData['submittedAt'] is String) {
-                  submissionData['submittedAt'] = DateTime.parse(submissionData['submittedAt']);
-                }
-                if (submissionData['gradedAt'] is String) {
-                  submissionData['gradedAt'] = DateTime.parse(submissionData['gradedAt']);
-                }
-                submissionsList.add(StudentSubmission.fromJson(submissionData));
-              }
-            }
-            data['submissions'] = submissionsList;
           } else {
-            data['submissions'] = <StudentSubmission>[];
+            data['komentar'] = <TaskComment>[];
           }
           
-          // Parse submissions
+          // Parse submissions (removed duplicate code)
           if (data['submissions'] is List) {
             final submissionsList = <StudentSubmission>[];
             for (final submissionData in data['submissions']) {
               if (submissionData is Map<String, dynamic>) {
-                if (submissionData['submittedAt'] is String) {
-                  submissionData['submittedAt'] = DateTime.parse(submissionData['submittedAt']);
-                }
-                if (submissionData['gradedAt'] is String) {
-                  submissionData['gradedAt'] = DateTime.parse(submissionData['gradedAt']);
-                }
                 submissionsList.add(StudentSubmission.fromJson(submissionData));
               }
             }
@@ -1916,10 +1935,32 @@ class AdminService {
           
           final task = AdminTask.fromJson(data);
           tasks.add(task);
-        } catch (e) {
+          
           if (kDebugMode) {
-            print('Error parsing task document ${doc.id}: $e');
+            print('  -> Successfully parsed task: ${task.judul} (ID: ${task.id})');
           }
+        } catch (e, stackTrace) {
+          if (kDebugMode) {
+            print('  -> ERROR parsing task document ${doc.id}: $e');
+            print('  -> Document data: ${doc.data()}');
+            print('  -> Stack trace: $stackTrace');
+          }
+        }
+      }
+
+      if (kDebugMode) {
+        print('=== FINAL RESULT ===');
+        print('Retrieved ${tasks.length} active tasks from Firebase');
+        if (tasks.isNotEmpty) {
+          print('Tasks found:');
+          for (var task in tasks) {
+            print('  - ${task.judul} (Class: ${task.kodeKelas}, Subject: ${task.mataPelajaran})');
+          }
+        } else {
+          print('NO TASKS FOUND! This could be because:');
+          print('1. All tasks have isActive = false');
+          print('2. Tasks exist but failed to parse');
+          print('3. No tasks exist in the collection');
         }
       }
 
@@ -1927,6 +1968,7 @@ class AdminService {
     } catch (e) {
       if (kDebugMode) {
         print('Error fetching tasks: $e');
+        print('Stack trace: ${StackTrace.current}');
       }
       return [];
     }
@@ -1941,55 +1983,7 @@ class AdminService {
       final data = doc.data()!;
       data['id'] = doc.id;
       
-      // Parse dates safely
-      if (data['tanggalDibuat'] is String) {
-        data['tanggalDibuat'] = DateTime.parse(data['tanggalDibuat']);
-      }
-      if (data['tanggalDibuka'] is String) {
-        data['tanggalDibuka'] = DateTime.parse(data['tanggalDibuka']);
-      }
-      if (data['tanggalBerakhir'] is String) {
-        data['tanggalBerakhir'] = DateTime.parse(data['tanggalBerakhir']);
-      }
-      if (data['createdAt'] is String) {
-        data['createdAt'] = DateTime.parse(data['createdAt']);
-      }
-      if (data['updatedAt'] is String) {
-        data['updatedAt'] = DateTime.parse(data['updatedAt']);
-      }
-      
-      // Parse comments
-      if (data['komentar'] is List) {
-        final commentsList = <TaskComment>[];
-        for (final commentData in data['komentar']) {
-          if (commentData is Map<String, dynamic>) {
-            if (commentData['createdAt'] is String) {
-              commentData['createdAt'] = DateTime.parse(commentData['createdAt']);
-            }
-            commentsList.add(TaskComment.fromJson(commentData));
-          }
-        }
-        data['komentar'] = commentsList;
-      }
-      
-      // Parse submissions
-      if (data['submissions'] is List) {
-        final submissionsList = <StudentSubmission>[];
-        for (final submissionData in data['submissions']) {
-          if (submissionData is Map<String, dynamic>) {
-            if (submissionData['submittedAt'] is String) {
-              submissionData['submittedAt'] = DateTime.parse(submissionData['submittedAt']);
-            }
-            if (submissionData['gradedAt'] is String) {
-              submissionData['gradedAt'] = DateTime.parse(submissionData['gradedAt']);
-            }
-            submissionsList.add(StudentSubmission.fromJson(submissionData));
-          }
-        }
-        data['submissions'] = submissionsList;
-      } else {
-        data['submissions'] = <StudentSubmission>[];
-      }
+      // No manual date parsing needed - DateTimeConverter handles it automatically
       
       return AdminTask.fromJson(data);
     } catch (e) {
@@ -2024,12 +2018,14 @@ class AdminService {
 
   Future<List<AdminTask>> getTasksByClassCode(String classCode) async {
     try {
+      if (kDebugMode) print('DEBUG: Fetching tasks for class code: $classCode');
       final querySnapshot = await _firestore
           .collection('admin_tasks')
           .where('isActive', isEqualTo: true)
           .where('kodeKelas', isEqualTo: classCode)
-          .orderBy('createdAt', descending: true)
           .get();
+
+      if (kDebugMode) print('DEBUG: Found ${querySnapshot.docs.length} documents in admin_tasks collection');
 
       final tasks = <AdminTask>[];
       for (final doc in querySnapshot.docs) {
@@ -2037,38 +2033,13 @@ class AdminService {
           final data = doc.data();
           data['id'] = doc.id;
           
-          // Parse dates and comments similar to getAllTasks
-          if (data['tanggalDibuat'] is String) {
-            data['tanggalDibuat'] = DateTime.parse(data['tanggalDibuat']);
-          }
-          if (data['tanggalDibuka'] is String) {
-            data['tanggalDibuka'] = DateTime.parse(data['tanggalDibuka']);
-          }
-          if (data['tanggalBerakhir'] is String) {
-            data['tanggalBerakhir'] = DateTime.parse(data['tanggalBerakhir']);
-          }
-          if (data['createdAt'] is String) {
-            data['createdAt'] = DateTime.parse(data['createdAt']);
-          }
-          if (data['updatedAt'] is String) {
-            data['updatedAt'] = DateTime.parse(data['updatedAt']);
-          }
+          if (kDebugMode) print('DEBUG: Processing task document ${doc.id}: ${data['judul']}');
           
-          if (data['komentar'] is List) {
-            final commentsList = <TaskComment>[];
-            for (final commentData in data['komentar']) {
-              if (commentData is Map<String, dynamic>) {
-                if (commentData['createdAt'] is String) {
-                  commentData['createdAt'] = DateTime.parse(commentData['createdAt']);
-                }
-                commentsList.add(TaskComment.fromJson(commentData));
-              }
-            }
-            data['komentar'] = commentsList;
-          }
+          // No manual date parsing needed - DateTimeConverter handles it automatically
           
           final task = AdminTask.fromJson(data);
           tasks.add(task);
+          if (kDebugMode) print('DEBUG: Successfully parsed task: ${task.judul}');
         } catch (e) {
           if (kDebugMode) {
             print('Error parsing task document ${doc.id}: $e');
@@ -2076,12 +2047,266 @@ class AdminService {
         }
       }
 
+      // Sort tasks by creation date in memory instead of in query
+      tasks.sort((a, b) => b.tanggalDibuat.compareTo(a.tanggalDibuat));
+
+      if (kDebugMode) print('DEBUG: Successfully parsed ${tasks.length} tasks');
       return tasks;
     } catch (e) {
       if (kDebugMode) {
         print('Error fetching tasks by class code: $e');
       }
       return [];
+    }
+  }
+
+  // School Account Operations
+  Future<SchoolAccount?> getSchoolAccountByEmail(String email) async {
+    try {
+      debugPrint('Looking for school account with email: $email');
+      
+      final querySnapshot = await _firestore
+          .collection('school_accounts')
+          .where('email', isEqualTo: email.trim().toLowerCase())
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      debugPrint('Found ${querySnapshot.docs.length} school accounts with email: $email');
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final schoolAccount = SchoolAccount.fromJson({...querySnapshot.docs.first.data(), 'id': querySnapshot.docs.first.id});
+        debugPrint('School account found: ${schoolAccount.schoolName} (${schoolAccount.email})');
+        return schoolAccount;
+      }
+      
+      debugPrint('No school account found with email: $email');
+      return null;
+    } catch (e) {
+      debugPrint('Error getting school account by email: $e');
+      return null;
+    }
+  }
+
+  Future<String?> createSchoolAccount(SchoolAccount schoolAccount) async {
+    try {
+      debugPrint('Creating school account with data: ${schoolAccount.toJson()}');
+      
+      // Check if school account with this email already exists
+      final existingAccount = await getSchoolAccountByEmail(schoolAccount.email);
+      if (existingAccount != null) {
+        debugPrint('School account with email ${schoolAccount.email} already exists');
+        throw Exception('Akun sekolah dengan email ini sudah terdaftar');
+      }
+      
+      // Create school account data for Firestore
+      final schoolAccountData = schoolAccount.toJson();
+      
+      final docRef = await _firestore.collection('school_accounts').add(schoolAccountData);
+      debugPrint('School account created successfully in Firestore with ID: ${docRef.id}');
+      
+      return docRef.id;
+    } catch (e) {
+      debugPrint('Error creating school account: $e');
+      debugPrint('Stack trace: ${StackTrace.current}');
+      rethrow;
+    }
+  }
+
+  Future<bool> updateSchoolAccount(String accountId, Map<String, dynamic> updates) async {
+    try {
+      updates['updatedAt'] = DateTime.now().toIso8601String();
+      
+      await _firestore
+          .collection('school_accounts')
+          .doc(accountId)
+          .update(updates);
+      
+      debugPrint('School account updated successfully: $accountId');
+      return true;
+    } catch (e) {
+      debugPrint('Error updating school account: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteSchoolAccount(String accountId) async {
+    try {
+      await _firestore
+          .collection('school_accounts')
+          .doc(accountId)
+          .update({
+            'isActive': false,
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
+      
+      debugPrint('School account deactivated successfully: $accountId');
+      return true;
+    } catch (e) {
+      debugPrint('Error deactivating school account: $e');
+      return false;
+    }
+  }
+
+  Future<List<SchoolAccount>> getAllSchoolAccounts() async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('school_accounts')
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final schoolAccounts = <SchoolAccount>[];
+      for (final doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          
+          // Parse dates
+          if (data['createdAt'] is String) {
+            data['createdAt'] = DateTime.parse(data['createdAt']);
+          }
+          if (data['updatedAt'] is String) {
+            data['updatedAt'] = DateTime.parse(data['updatedAt']);
+          }
+          if (data['lastLogin'] is String) {
+            data['lastLogin'] = DateTime.parse(data['lastLogin']);
+          }
+          if (data['resetTokenExpiry'] is String) {
+            data['resetTokenExpiry'] = DateTime.parse(data['resetTokenExpiry']);
+          }
+          
+          final schoolAccount = SchoolAccount.fromJson(data);
+          schoolAccounts.add(schoolAccount);
+        } catch (e) {
+          debugPrint('Error parsing school account document ${doc.id}: $e');
+        }
+      }
+
+      return schoolAccounts;
+    } catch (e) {
+      debugPrint('Error fetching school accounts: $e');
+      return [];
+    }
+  }
+
+  // School-specific operations with permission checks
+  Future<bool> hasSchoolPermission(String schoolAccountId, String permission) async {
+    try {
+      final schoolAccount = await _firestore
+          .collection('school_accounts')
+          .doc(schoolAccountId)
+          .get();
+
+      if (schoolAccount.exists && schoolAccount.data() != null) {
+        final data = schoolAccount.data()!;
+        final permissions = List<String>.from(data['permissions'] ?? []);
+        return permissions.contains(permission);
+      }
+      
+      return false;
+    } catch (e) {
+      debugPrint('Error checking school permission: $e');
+      return false;
+    }
+  }
+
+
+
+  Future<List<Subject>> getSubjectsBySchool(String schoolId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('subjects')
+          .where('schoolId', isEqualTo: schoolId)
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final subjects = <Subject>[];
+      for (final doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          
+          // Parse dates
+          if (data['createdAt'] is String) {
+            data['createdAt'] = DateTime.parse(data['createdAt']);
+          }
+          if (data['updatedAt'] is String) {
+            data['updatedAt'] = DateTime.parse(data['updatedAt']);
+          }
+          
+          final subject = Subject.fromJson(data);
+          subjects.add(subject);
+        } catch (e) {
+          debugPrint('Error parsing subject document ${doc.id}: $e');
+        }
+      }
+
+      return subjects;
+    } catch (e) {
+      debugPrint('Error fetching subjects by school: $e');
+      return [];
+    }
+  }
+
+
+
+  Future<Map<String, dynamic>> getSchoolDashboardStats(String schoolId) async {
+    try {
+      final teachersCount = await _firestore
+          .collection('teachers')
+          .where('schoolId', isEqualTo: schoolId)
+          .where('isActive', isEqualTo: true)
+          .count()
+          .get();
+
+      final subjectsCount = await _firestore
+          .collection('subjects')
+          .where('schoolId', isEqualTo: schoolId)
+          .where('isActive', isEqualTo: true)
+          .count()
+          .get();
+
+      final classCodesCount = await _firestore
+          .collection('class_codes')
+          .where('schoolId', isEqualTo: schoolId)
+          .where('isActive', isEqualTo: true)
+          .count()
+          .get();
+
+      // Count students through class codes
+      final classCodesSnapshot = await _firestore
+          .collection('class_codes')
+          .where('schoolId', isEqualTo: schoolId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      int totalStudents = 0;
+      for (final classDoc in classCodesSnapshot.docs) {
+        final studentsCount = await _firestore
+            .collection('students')
+            .where('classCodeId', isEqualTo: classDoc.id)
+            .where('isActive', isEqualTo: true)
+            .count()
+            .get();
+        totalStudents += studentsCount.count ?? 0;
+      }
+
+      return {
+        'teachers': teachersCount.count ?? 0,
+        'subjects': subjectsCount.count ?? 0,
+        'classCodes': classCodesCount.count ?? 0,
+        'students': totalStudents,
+      };
+    } catch (e) {
+      debugPrint('Error getting school dashboard stats: $e');
+      return {
+        'teachers': 0,
+        'subjects': 0,
+        'classCodes': 0,
+        'students': 0,
+      };
     }
   }
 }

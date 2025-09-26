@@ -9,7 +9,7 @@ class ClassCode {
   final String name;
   final String description;
   final String teacherId;
-  final String schoolId; // Link class to school
+  final String? schoolId; // Link class to school - nullable to handle missing schoolId
   final DateTime createdAt;
   final bool isActive;
 
@@ -19,7 +19,7 @@ class ClassCode {
     required this.name,
     required this.description,
     required this.teacherId,
-    required this.schoolId,
+    this.schoolId, // Make schoolId optional
     required this.createdAt,
     this.isActive = true,
   });

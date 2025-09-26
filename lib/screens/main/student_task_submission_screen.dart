@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../models/admin_models.dart';
@@ -32,27 +33,36 @@ class _StudentTaskSubmissionScreenState extends State<StudentTaskSubmissionScree
 
   Future<void> _loadStudentData() async {
     try {
+      if (kDebugMode) print('DEBUG: Starting to load student data...');
       final userProfile = await _authService.getCurrentUserProfile();
+      if (kDebugMode) print('DEBUG: User profile: $userProfile');
       _currentClassCode = userProfile?.classCode;
       _currentStudentId = _authService.currentUser?.uid;
+      if (kDebugMode) print('DEBUG: Current student ID: $_currentStudentId');
+      if (kDebugMode) print('DEBUG: Class code from profile: $_currentClassCode');
       
       if (_currentStudentId != null) {
         final student = await _adminService.getStudentById(_currentStudentId!);
+        if (kDebugMode) print('DEBUG: Student data: $student');
         if (student != null) {
           _currentStudentName = student.name;
           _currentClassCode = student.classCodeId;
+          if (kDebugMode) print('DEBUG: Updated class code from student: $_currentClassCode');
         }
       }
       
-      if (_currentClassCode != null) {
+      if (_currentClassCode != null && _currentClassCode!.isNotEmpty) {
+        if (kDebugMode) print('DEBUG: Loading tasks for class code: $_currentClassCode');
         await _loadTasks();
       } else {
+        if (kDebugMode) print('DEBUG: No class code found, showing dialog');
         setState(() {
           _isLoading = false;
         });
         _showNoClassCodeDialog();
       }
     } catch (e) {
+      if (kDebugMode) print('DEBUG: Error loading student data: $e');
       setState(() {
         _isLoading = false;
       });
@@ -61,22 +71,43 @@ class _StudentTaskSubmissionScreenState extends State<StudentTaskSubmissionScree
   }
 
   Future<void> _loadTasks() async {
-    if (_currentClassCode == null) return;
+    if (_currentClassCode == null || _currentClassCode!.isEmpty) {
+      if (kDebugMode) print('DEBUG: Cannot load tasks - no class code');
+      return;
+    }
     
     setState(() {
       _isLoading = true;
     });
 
     try {
+      if (kDebugMode) print('DEBUG: Fetching tasks for class code: $_currentClassCode');
       final tasks = await _adminService.getTasksByClassCode(_currentClassCode!);
+      if (kDebugMode) print('DEBUG: Received ${tasks.length} tasks from service');
+      
+      // Log each task for debugging
+      if (kDebugMode) {
+        for (int i = 0; i < tasks.length; i++) {
+          final task = tasks[i];
+          print('DEBUG: Task $i: ${task.judul} - isActive: ${task.isActive} - Class: ${task.kodeKelas}');
+        }
+      }
+      
+      // Show all active tasks, don't filter by end date here
+      final activeTasks = tasks.where((task) => task.isActive).toList();
+      if (kDebugMode) print('DEBUG: Filtered to ${activeTasks.length} active tasks');
+      
       setState(() {
-        _tasks = tasks.where((task) => 
-          task.isActive && 
-          task.tanggalBerakhir.isAfter(DateTime.now())
-        ).toList();
+        _tasks = activeTasks;
         _isLoading = false;
       });
+      
+      if (kDebugMode) print('DEBUG: Tasks loaded successfully: ${_tasks.length} tasks');
+      if (kDebugMode) print('DEBUG: Current filter: $_selectedFilter');
+      if (kDebugMode) print('DEBUG: Filtered tasks count: ${_filteredTasks.length}');
     } catch (e) {
+      if (kDebugMode) print('DEBUG: Error loading tasks: $e');
+      if (kDebugMode) print('DEBUG: Stack trace: ${StackTrace.current}');
       setState(() {
         _isLoading = false;
       });

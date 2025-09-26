@@ -373,14 +373,14 @@ Map<String, dynamic> _$StudentAnswerToJson(StudentAnswer instance) =>
 
 AdminTask _$AdminTaskFromJson(Map<String, dynamic> json) => AdminTask(
   id: json['id'] as String,
-  tanggalDibuat: DateTime.parse(json['tanggalDibuat'] as String),
+  tanggalDibuat: const DateTimeConverter().fromJson(json['tanggalDibuat']),
   kodeKelas: json['kodeKelas'] as String,
   mataPelajaran: json['mataPelajaran'] as String,
   judul: json['judul'] as String,
   deskripsi: json['deskripsi'] as String,
   linkSoal: json['linkSoal'] as String?,
-  tanggalDibuka: DateTime.parse(json['tanggalDibuka'] as String),
-  tanggalBerakhir: DateTime.parse(json['tanggalBerakhir'] as String),
+  tanggalDibuka: const DateTimeConverter().fromJson(json['tanggalDibuka']),
+  tanggalBerakhir: const DateTimeConverter().fromJson(json['tanggalBerakhir']),
   linkPdf: json['linkPdf'] as String?,
   komentar:
       (json['komentar'] as List<dynamic>?)
@@ -393,27 +393,27 @@ AdminTask _$AdminTaskFromJson(Map<String, dynamic> json) => AdminTask(
           .toList() ??
       const [],
   createdBy: json['createdBy'] as String,
-  createdAt: DateTime.parse(json['createdAt'] as String),
-  updatedAt: DateTime.parse(json['updatedAt'] as String),
+  createdAt: const DateTimeConverter().fromJson(json['createdAt']),
+  updatedAt: const DateTimeConverter().fromJson(json['updatedAt']),
   isActive: json['isActive'] as bool? ?? true,
 );
 
 Map<String, dynamic> _$AdminTaskToJson(AdminTask instance) => <String, dynamic>{
   'id': instance.id,
-  'tanggalDibuat': instance.tanggalDibuat.toIso8601String(),
+  'tanggalDibuat': const DateTimeConverter().toJson(instance.tanggalDibuat),
   'kodeKelas': instance.kodeKelas,
   'mataPelajaran': instance.mataPelajaran,
   'judul': instance.judul,
   'deskripsi': instance.deskripsi,
   'linkSoal': instance.linkSoal,
-  'tanggalDibuka': instance.tanggalDibuka.toIso8601String(),
-  'tanggalBerakhir': instance.tanggalBerakhir.toIso8601String(),
+  'tanggalDibuka': const DateTimeConverter().toJson(instance.tanggalDibuka),
+  'tanggalBerakhir': const DateTimeConverter().toJson(instance.tanggalBerakhir),
   'linkPdf': instance.linkPdf,
   'komentar': instance.komentar,
   'submissions': instance.submissions,
   'createdBy': instance.createdBy,
-  'createdAt': instance.createdAt.toIso8601String(),
-  'updatedAt': instance.updatedAt.toIso8601String(),
+  'createdAt': const DateTimeConverter().toJson(instance.createdAt),
+  'updatedAt': const DateTimeConverter().toJson(instance.updatedAt),
   'isActive': instance.isActive,
 };
 
@@ -424,7 +424,7 @@ TaskComment _$TaskCommentFromJson(Map<String, dynamic> json) => TaskComment(
   authorName: json['authorName'] as String,
   authorType: json['authorType'] as String,
   comment: json['comment'] as String,
-  createdAt: DateTime.parse(json['createdAt'] as String),
+  createdAt: const DateTimeConverter().fromJson(json['createdAt']),
   isActive: json['isActive'] as bool? ?? true,
 );
 
@@ -436,7 +436,7 @@ Map<String, dynamic> _$TaskCommentToJson(TaskComment instance) =>
       'authorName': instance.authorName,
       'authorType': instance.authorType,
       'comment': instance.comment,
-      'createdAt': instance.createdAt.toIso8601String(),
+      'createdAt': const DateTimeConverter().toJson(instance.createdAt),
       'isActive': instance.isActive,
     };
 
@@ -449,11 +449,8 @@ StudentSubmission _$StudentSubmissionFromJson(Map<String, dynamic> json) =>
       title: json['title'] as String,
       description: json['description'] as String,
       link: json['link'] as String,
-      submittedAt: DateTime.parse(json['submittedAt'] as String),
-      gradedAt:
-          json['gradedAt'] == null
-              ? null
-              : DateTime.parse(json['gradedAt'] as String),
+      submittedAt: const DateTimeConverter().fromJson(json['submittedAt']),
+      gradedAt: const DateTimeConverter().fromJson(json['gradedAt']),
       score: (json['score'] as num?)?.toInt(),
       feedback: json['feedback'] as String?,
       isActive: json['isActive'] as bool? ?? true,
@@ -468,9 +465,65 @@ Map<String, dynamic> _$StudentSubmissionToJson(StudentSubmission instance) =>
       'title': instance.title,
       'description': instance.description,
       'link': instance.link,
-      'submittedAt': instance.submittedAt.toIso8601String(),
-      'gradedAt': instance.gradedAt?.toIso8601String(),
+      'submittedAt': const DateTimeConverter().toJson(instance.submittedAt),
+      'gradedAt': _$JsonConverterToJson<dynamic, DateTime>(
+        instance.gradedAt,
+        const DateTimeConverter().toJson,
+      ),
       'score': instance.score,
       'feedback': instance.feedback,
       'isActive': instance.isActive,
+    };
+
+Json? _$JsonConverterToJson<Json, Value>(
+  Value? value,
+  Json? Function(Value value) toJson,
+) => value == null ? null : toJson(value);
+
+SchoolAccount _$SchoolAccountFromJson(Map<String, dynamic> json) =>
+    SchoolAccount(
+      id: json['id'] as String,
+      schoolId: json['schoolId'] as String,
+      email: json['email'] as String,
+      password: json['password'] as String,
+      schoolName: json['schoolName'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      lastLogin:
+          json['lastLogin'] == null
+              ? null
+              : DateTime.parse(json['lastLogin'] as String),
+      isActive: json['isActive'] as bool? ?? true,
+      permissions:
+          (json['permissions'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [
+            'update_school',
+            'manage_teachers',
+            'manage_subjects',
+            'manage_class_codes',
+            'manage_students',
+          ],
+      resetToken: json['resetToken'] as String?,
+      resetTokenExpiry:
+          json['resetTokenExpiry'] == null
+              ? null
+              : DateTime.parse(json['resetTokenExpiry'] as String),
+    );
+
+Map<String, dynamic> _$SchoolAccountToJson(SchoolAccount instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'schoolId': instance.schoolId,
+      'email': instance.email,
+      'password': instance.password,
+      'schoolName': instance.schoolName,
+      'createdAt': instance.createdAt.toIso8601String(),
+      'updatedAt': instance.updatedAt.toIso8601String(),
+      'lastLogin': instance.lastLogin?.toIso8601String(),
+      'isActive': instance.isActive,
+      'permissions': instance.permissions,
+      'resetToken': instance.resetToken,
+      'resetTokenExpiry': instance.resetTokenExpiry?.toIso8601String(),
     };

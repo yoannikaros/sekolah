@@ -29,6 +29,12 @@ class EventPlannerService {
         'tags': event.tags,
         'challengedSchoolId': event.challengedSchoolId,
         'challengedSchoolName': event.challengedSchoolName,
+        'visibility': _getVisibilityString(event.visibility),
+        'requiredClassCode': event.requiredClassCode,
+        'votesCount': event.votesCount,
+        'voters': event.voters.map((v) => v.toJson()).toList(),
+        'challengeAccepted': event.challengeAccepted,
+        'challengeDeadline': event.challengeDeadline?.toIso8601String(),
       };
       
       final docRef = await _firestore.collection('event_planners').add(eventData);
@@ -67,6 +73,12 @@ class EventPlannerService {
         'tags': event.tags,
         'challengedSchoolId': event.challengedSchoolId,
         'challengedSchoolName': event.challengedSchoolName,
+        'visibility': _getVisibilityString(event.visibility),
+        'requiredClassCode': event.requiredClassCode,
+        'votesCount': event.votesCount,
+        'voters': event.voters.map((v) => v.toJson()).toList(),
+        'challengeAccepted': event.challengeAccepted,
+        'challengeDeadline': event.challengeDeadline?.toIso8601String(),
       };
       
       await _firestore.collection('event_planners').doc(id).update(eventData);
@@ -434,6 +446,7 @@ class EventPlannerService {
   EventVisibility _parseEventVisibility(String? visibilityString) {
     switch (visibilityString) {
       case 'internalClass':
+      case 'internal_class':
         return EventVisibility.internalClass;
       case 'school':
         return EventVisibility.school;
@@ -597,6 +610,17 @@ class EventPlannerService {
         print('Error getting visible events: $e');
       }
       return [];
+    }
+  }
+
+  String _getVisibilityString(EventVisibility visibility) {
+    switch (visibility) {
+      case EventVisibility.internalClass:
+        return 'internal_class';
+      case EventVisibility.school:
+        return 'school';
+      case EventVisibility.public:
+        return 'public';
     }
   }
 }

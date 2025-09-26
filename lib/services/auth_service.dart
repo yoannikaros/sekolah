@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:math';
 import '../models/admin_models.dart';
 import '../models/social_media_models.dart';
 
@@ -95,6 +96,70 @@ class AuthService {
     }
   }
 
+  // School login with email and password
+  Future<Map<String, dynamic>?> signInSchool({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // Query school accounts collection for matching email
+      final schoolAccountQuery = await _firestore
+          .collection('school_accounts')
+          .where('email', isEqualTo: email.trim())
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (schoolAccountQuery.docs.isEmpty) {
+        throw 'Email sekolah tidak ditemukan atau tidak aktif.';
+      }
+
+      final schoolAccountDoc = schoolAccountQuery.docs.first;
+      final schoolAccountData = schoolAccountDoc.data();
+      
+      // Verify password (in production, this should be hashed)
+      if (schoolAccountData['password'] != password) {
+        throw 'Password salah. Silakan coba lagi.';
+      }
+
+      // Update last login
+      await _firestore.collection('school_accounts').doc(schoolAccountDoc.id).update({
+        'lastLogin': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      // Get school information
+      final schoolDoc = await _firestore.collection('schools').doc(schoolAccountData['schoolId']).get();
+      
+      if (!schoolDoc.exists) {
+        throw 'Data sekolah tidak ditemukan.';
+      }
+
+      final schoolData = schoolDoc.data()!;
+      schoolData['id'] = schoolDoc.id;
+
+      if (kDebugMode) {
+        print('School login successful: ${schoolAccountData['schoolName']}');
+      }
+
+      // Create school account object
+      final schoolAccount = SchoolAccount.fromJson({
+        ...schoolAccountData,
+        'id': schoolAccountDoc.id,
+      });
+
+      return {
+        'schoolAccount': schoolAccount,
+        'school': School.fromJson(schoolData),
+      };
+    } catch (e) {
+      if (e is String) {
+        rethrow;
+      }
+      throw 'Terjadi kesalahan yang tidak terduga. Silakan coba lagi.';
+    }
+  }
+
   // Check if current user is a teacher
   Future<Teacher?> getCurrentTeacher() async {
     try {
@@ -116,6 +181,36 @@ class AuthService {
     }
   }
 
+  // Check if current user is a school account
+  Future<SchoolAccount?> getCurrentSchoolAccount() async {
+    try {
+      // This method would be used if we integrate with Firebase Auth
+      // For now, we'll implement it for future use
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final schoolAccountQuery = await _firestore
+          .collection('school_accounts')
+          .where('email', isEqualTo: user.email)
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (schoolAccountQuery.docs.isEmpty) return null;
+
+      final schoolAccountDoc = schoolAccountQuery.docs.first;
+      final schoolAccountData = schoolAccountDoc.data();
+      schoolAccountData['id'] = schoolAccountDoc.id;
+      
+      return SchoolAccount.fromJson(schoolAccountData);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting current school account: $e');
+      }
+      return null;
+    }
+  }
+
   // Validate teacher credentials and school access
   Future<bool> validateTeacherAccess(String teacherId, String schoolId) async {
     try {
@@ -128,6 +223,23 @@ class AuthService {
     } catch (e) {
       if (kDebugMode) {
         print('Error validating teacher access: $e');
+      }
+      return false;
+    }
+  }
+
+  // Validate school account access
+  Future<bool> validateSchoolAccess(String schoolAccountId, String schoolId) async {
+    try {
+      final schoolAccountDoc = await _firestore.collection('school_accounts').doc(schoolAccountId).get();
+      
+      if (!schoolAccountDoc.exists) return false;
+      
+      final schoolAccountData = schoolAccountDoc.data()!;
+      return schoolAccountData['schoolId'] == schoolId && schoolAccountData['isActive'] == true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error validating school access: $e');
       }
       return false;
     }
@@ -171,6 +283,45 @@ class AuthService {
     }
   }
 
+  // Send password reset email for school account
+  Future<void> sendSchoolPasswordResetEmail({required String email}) async {
+    try {
+      // Check if school account exists
+      final schoolAccountQuery = await _firestore
+          .collection('school_accounts')
+          .where('email', isEqualTo: email.trim())
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (schoolAccountQuery.docs.isEmpty) {
+        throw 'Email sekolah tidak ditemukan.';
+      }
+
+      // Generate reset token
+      final resetToken = _generateResetToken();
+      final resetTokenExpiry = DateTime.now().add(const Duration(hours: 1));
+
+      // Update school account with reset token
+      await _firestore.collection('school_accounts').doc(schoolAccountQuery.docs.first.id).update({
+        'resetToken': resetToken,
+        'resetTokenExpiry': resetTokenExpiry.toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+
+      // In a real implementation, you would send an email here
+      // For now, we'll just log the reset token
+      if (kDebugMode) {
+        print('Password reset token for $email: $resetToken');
+      }
+    } catch (e) {
+      if (e is String) {
+        rethrow;
+      }
+      throw 'Gagal mengirim email reset password. Silakan coba lagi.';
+    }
+  }
+
   // Send email verification
   Future<void> sendEmailVerification() async {
     try {
@@ -190,6 +341,13 @@ class AuthService {
     } catch (e) {
       // Ignore reload errors
     }
+  }
+
+  // Generate reset token
+  String _generateResetToken() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return String.fromCharCodes(Iterable.generate(32, (_) => chars.codeUnitAt(random.nextInt(chars.length))));
   }
 
   // Handle Firebase Auth exceptions

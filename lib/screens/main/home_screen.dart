@@ -4,7 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../services/auth_service.dart';
 import 'quiz_screen.dart';
 import 'social_media_screen.dart';
-import 'student_material_screen.dart';
+
 import 'student_task_submission_screen.dart';
 import 'event_planner_student_screen.dart';
 import '../chat/chat_room_list_screen.dart';
@@ -330,10 +330,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   LucideIcons.fileText,
                   const Color(0xFF10B981),
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const StudentMaterialScreen(),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Fitur materi sedang dalam pengembangan'),
                       ),
                     );
                   },

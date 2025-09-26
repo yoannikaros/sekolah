@@ -12,7 +12,7 @@ ClassCode _$ClassCodeFromJson(Map<String, dynamic> json) => ClassCode(
   name: json['name'] as String,
   description: json['description'] as String,
   teacherId: json['teacherId'] as String,
-  schoolId: json['schoolId'] as String,
+  schoolId: json['schoolId'] as String?,
   createdAt: DateTime.parse(json['createdAt'] as String),
   isActive: json['isActive'] as bool? ?? true,
 );

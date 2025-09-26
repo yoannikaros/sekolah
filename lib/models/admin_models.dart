@@ -1,7 +1,29 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 part 'admin_models.g.dart';
+
+// Custom converter for DateTime that handles both String and Timestamp
+class DateTimeConverter implements JsonConverter<DateTime, dynamic> {
+  const DateTimeConverter();
+
+  @override
+  DateTime fromJson(dynamic json) {
+    if (json is String) {
+      return DateTime.parse(json);
+    } else if (json is Timestamp) {
+      return json.toDate();
+    } else if (json is DateTime) {
+      return json;
+    } else {
+      throw ArgumentError('Cannot convert $json to DateTime');
+    }
+  }
+
+  @override
+  String toJson(DateTime object) => object.toIso8601String();
+}
 
 @JsonSerializable()
 class School {
@@ -629,19 +651,24 @@ class StudentAnswer {
 @JsonSerializable()
 class AdminTask {
   final String id;
+  @DateTimeConverter()
   final DateTime tanggalDibuat;
   final String kodeKelas;
   final String mataPelajaran;
   final String judul;
   final String deskripsi;
   final String? linkSoal;
+  @DateTimeConverter()
   final DateTime tanggalDibuka;
+  @DateTimeConverter()
   final DateTime tanggalBerakhir;
   final String? linkPdf;
   final List<TaskComment> komentar;
   final List<StudentSubmission> submissions; // Daftar pengumpulan siswa
   final String createdBy; // ID admin/guru yang membuat
+  @DateTimeConverter()
   final DateTime createdAt;
+  @DateTimeConverter()
   final DateTime updatedAt;
   final bool isActive;
 
@@ -715,6 +742,7 @@ class TaskComment {
   final String authorName;
   final String authorType; // 'guru' atau 'murid'
   final String comment;
+  @DateTimeConverter()
   final DateTime createdAt;
   final bool isActive;
 
@@ -743,7 +771,9 @@ class StudentSubmission {
   final String title; // Judul pengumpulan
   final String description; // Deskripsi pengumpulan
   final String link; // Link pengumpulan (Google Drive, dll)
+  @DateTimeConverter()
   final DateTime submittedAt;
+  @DateTimeConverter()
   final DateTime? gradedAt;
   final int? score; // Nilai yang diberikan guru
   final String? feedback; // Feedback dari guru
@@ -796,4 +826,75 @@ class StudentSubmission {
 
   factory StudentSubmission.fromJson(Map<String, dynamic> json) => _$StudentSubmissionFromJson(json);
   Map<String, dynamic> toJson() => _$StudentSubmissionToJson(this);
+}
+
+// Model untuk akun login sekolah
+@JsonSerializable()
+class SchoolAccount {
+  final String id;
+  final String schoolId; // Reference to School
+  final String email;
+  final String password; // Hashed password
+  final String schoolName; // Cached school name for quick access
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? lastLogin;
+  final bool isActive;
+  final List<String> permissions; // School-specific permissions
+  final String? resetToken; // For password reset
+  final DateTime? resetTokenExpiry;
+
+  SchoolAccount({
+    required this.id,
+    required this.schoolId,
+    required this.email,
+    required this.password,
+    required this.schoolName,
+    required this.createdAt,
+    required this.updatedAt,
+    this.lastLogin,
+    this.isActive = true,
+    this.permissions = const [
+      'update_school',
+      'manage_teachers',
+      'manage_subjects',
+      'manage_class_codes',
+      'manage_students',
+    ],
+    this.resetToken,
+    this.resetTokenExpiry,
+  });
+
+  SchoolAccount copyWith({
+    String? id,
+    String? schoolId,
+    String? email,
+    String? password,
+    String? schoolName,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? lastLogin,
+    bool? isActive,
+    List<String>? permissions,
+    String? resetToken,
+    DateTime? resetTokenExpiry,
+  }) {
+    return SchoolAccount(
+      id: id ?? this.id,
+      schoolId: schoolId ?? this.schoolId,
+      email: email ?? this.email,
+      password: password ?? this.password,
+      schoolName: schoolName ?? this.schoolName,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastLogin: lastLogin ?? this.lastLogin,
+      isActive: isActive ?? this.isActive,
+      permissions: permissions ?? this.permissions,
+      resetToken: resetToken ?? this.resetToken,
+      resetTokenExpiry: resetTokenExpiry ?? this.resetTokenExpiry,
+    );
+  }
+
+  factory SchoolAccount.fromJson(Map<String, dynamic> json) => _$SchoolAccountFromJson(json);
+  Map<String, dynamic> toJson() => _$SchoolAccountToJson(this);
 }

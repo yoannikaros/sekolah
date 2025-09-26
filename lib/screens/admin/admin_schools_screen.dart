@@ -56,131 +56,276 @@ class _AdminSchoolsScreenState extends State<AdminSchoolsScreen> {
     final addressController = TextEditingController(text: school?.address ?? '');
     final phoneController = TextEditingController(text: school?.phone ?? '');
     final emailController = TextEditingController(text: school?.email ?? '');
+    
+    // Controllers for school account login credentials
+    final loginEmailController = TextEditingController();
+    final loginPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    
+    bool createLoginAccount = school == null; // Only show for new schools
 
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(school == null ? 'Tambah Sekolah' : 'Edit Sekolah'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nama Sekolah',
-                    border: OutlineInputBorder(),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(school == null ? 'Tambah Sekolah' : 'Edit Sekolah'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nama Sekolah *',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: addressController,
+                      decoration: const InputDecoration(
+                        labelText: 'Alamat',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: phoneController,
+                      decoration: const InputDecoration(
+                        labelText: 'Telepon',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    
+                    // Show login account creation section only for new schools
+                    if (school == null) ...[
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: createLoginAccount,
+                            onChanged: (value) {
+                              setState(() {
+                                createLoginAccount = value ?? false;
+                              });
+                            },
+                          ),
+                          const Expanded(
+                            child: Text(
+                              'Buat akun login untuk sekolah',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      if (createLoginAccount) ...[
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Kredensial Login Sekolah',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF673AB7),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: loginEmailController,
+                          decoration: const InputDecoration(
+                            labelText: 'Email Login *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.email),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: loginPasswordController,
+                          decoration: const InputDecoration(
+                            labelText: 'Password *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.lock),
+                          ),
+                          obscureText: true,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: confirmPasswordController,
+                          decoration: const InputDecoration(
+                            labelText: 'Konfirmasi Password *',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.lock_outline),
+                          ),
+                          obscureText: true,
+                        ),
+                      ],
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Alamat',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('Batal'),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nomor Telepon',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                  ),
+                ElevatedButton(
+                  child: Text(school == null ? 'Tambah' : 'Update'),
+                  onPressed: () async {
+                    if (nameController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Nama sekolah harus diisi')),
+                      );
+                      return;
+                    }
+
+                    // Validate login credentials if creating account
+                    if (school == null && createLoginAccount) {
+                      if (loginEmailController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Email login harus diisi')),
+                        );
+                        return;
+                      }
+                      
+                      if (loginPasswordController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Password harus diisi')),
+                        );
+                        return;
+                      }
+                      
+                      if (loginPasswordController.text != confirmPasswordController.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Password dan konfirmasi password tidak sama')),
+                        );
+                        return;
+                      }
+                      
+                      if (loginPasswordController.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Password minimal 6 karakter')),
+                        );
+                        return;
+                      }
+                    }
+
+                    final navigator = Navigator.of(context);
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+                    try {
+                      if (school == null) {
+                        // Create new school
+                        final newSchool = School(
+                          id: '', // This will be ignored by Firebase, document ID will be auto-generated
+                          name: nameController.text.trim(),
+                          address: addressController.text.trim(),
+                          phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                          email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                          website: null, // Set to null instead of empty string
+                          createdAt: DateTime.now(),
+                          isActive: true, // Explicitly set isActive to true
+                          logoUrl: null, // Set to null for new schools
+                        );
+                        
+                        if (kDebugMode) {
+                          print('Creating school with data: ${newSchool.name}');
+                        }
+                        final result = await _adminService.createSchool(newSchool);
+                        if (kDebugMode) {
+                          print('Create school result: $result');
+                        }
+                        
+                        if (result == null) {
+                          throw Exception('Gagal menambahkan sekolah ke database');
+                        }
+                        
+                        // Create school account if requested
+                         if (createLoginAccount) {
+                           try {
+                             final now = DateTime.now();
+                             final schoolAccount = SchoolAccount(
+                               id: '', // Will be set by Firestore
+                               schoolId: result,
+                               email: loginEmailController.text.trim().toLowerCase(),
+                               password: loginPasswordController.text.trim(),
+                               schoolName: nameController.text.trim(),
+                               createdAt: now,
+                               updatedAt: now,
+                             );
+                             
+                             await _adminService.createSchoolAccount(schoolAccount);
+                            
+                            if (mounted) {
+                              scaffoldMessenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Sekolah dan akun login berhasil dibuat'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (accountError) {
+                            if (mounted) {
+                              scaffoldMessenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Sekolah berhasil dibuat, tetapi gagal membuat akun login: $accountError'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      } else {
+                        // Update existing school
+                        final updatedSchool = school.copyWith(
+                          name: nameController.text.trim(),
+                          address: addressController.text.trim(),
+                          phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                          email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                        );
+                        final result = await _adminService.updateSchool(updatedSchool.id, updatedSchool);
+                        if (!result) {
+                          throw Exception('Gagal mengupdate sekolah di database');
+                        }
+                      }
+
+                      if (mounted) {
+                        navigator.pop();
+                        _loadSchools();
+                        
+                        if (school != null) {
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(
+                              content: Text('Sekolah berhasil diupdate'),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(content: Text('Error: $e')),
+                        );
+                      }
+                    }
+                  },
                 ),
               ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Batal'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            ElevatedButton(
-              child: Text(school == null ? 'Tambah' : 'Update'),
-              onPressed: () async {
-                if (nameController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Nama sekolah harus diisi')),
-                  );
-                  return;
-                }
-
-                final navigator = Navigator.of(context);
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-                try {
-                  if (school == null) {
-                    // Create new school
-                    final newSchool = School(
-                      id: '', // This will be ignored by Firebase, document ID will be auto-generated
-                      name: nameController.text.trim(),
-                      address: addressController.text.trim(),
-                      phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
-                      email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
-                      website: null, // Set to null instead of empty string
-                      createdAt: DateTime.now(),
-                      isActive: true, // Explicitly set isActive to true
-                      logoUrl: null, // Set to null for new schools
-                    );
-                    
-                    if (kDebugMode) {
-                      print('Creating school with data: ${newSchool.name}');
-                    }
-                    final result = await _adminService.createSchool(newSchool);
-                    if (kDebugMode) {
-                      print('Create school result: $result');
-                    }
-                    
-                    if (result == null) {
-                      throw Exception('Gagal menambahkan sekolah ke database');
-                    }
-                  } else {
-                    // Update existing school
-                    final updatedSchool = school.copyWith(
-                      name: nameController.text.trim(),
-                      address: addressController.text.trim(),
-                      phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
-                      email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
-                    );
-                    final result = await _adminService.updateSchool(updatedSchool.id, updatedSchool);
-                    if (!result) {
-                      throw Exception('Gagal mengupdate sekolah di database');
-                    }
-                  }
-
-                  if (mounted) {
-                    navigator.pop();
-                    _loadSchools();
-                    
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text(school == null 
-                          ? 'Sekolah berhasil ditambahkan' 
-                          : 'Sekolah berhasil diupdate'),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
-                    );
-                  }
-                }
-              },
-            ),
-          ],
+            );
+          },
         );
       },
     );

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/admin_service.dart';
+import '../../services/auth_service.dart';
+import '../auth/login_screen.dart';
 import 'admin_class_codes_screen.dart';
 import 'admin_students_screen.dart';
 import 'admin_schools_screen.dart';
@@ -11,7 +13,7 @@ import 'gallery_management_screen.dart';
 import 'event_planner_management_screen.dart';
 import 'ai_chat_config_screen.dart';
 import 'task_management_screen.dart';
-import 'material_management_screen.dart';
+
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -23,6 +25,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     with TickerProviderStateMixin {
   final AdminService _adminService = AdminService();
+  final AuthService _authService = AuthService();
   Map<String, dynamic> _stats = {};
   bool _isLoading = true;
   late AnimationController _animationController;
@@ -55,6 +58,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       _isLoading = false;
     });
     _animationController.forward();
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      await _authService.signOut();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error during logout: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -102,7 +126,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             margin: const EdgeInsets.only(right: 16),
             child: IconButton(
               icon: const Icon(Icons.logout_rounded),
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => _handleLogout(),
               tooltip: 'Logout',
               style: IconButton.styleFrom(
                 backgroundColor: Colors.white.withValues(alpha: 0.1),
@@ -289,15 +313,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               children: [
                                 _buildManagementCard(
                                   'Kelola Materi',
-                                  'Kelola materi pembelajaran dengan video YouTube dan komentar',
+                                  'Fitur dalam pengembangan',
                                   Icons.library_books_rounded,
                                   const Color(0xFF3F51B5),
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) =>
-                                              const MaterialManagementScreen(),
+                                  () => ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Fitur kelola materi sedang dalam pengembangan'),
                                     ),
                                   ),
                                 ),

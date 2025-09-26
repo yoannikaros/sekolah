@@ -4,8 +4,10 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../../services/auth_service.dart';
 import '../../services/admin_service.dart';
 import 'register_screen.dart';
+import 'school_login_screen.dart';
 import '../main/main_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../teacher/teacher_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _adminService = AdminService();
   bool _isPasswordVisible = false;
   bool _isLoading = false;
-  bool _isAdminLogin = false; // Toggle untuk login admin
+  String _loginType = 'student'; // 'student', 'teacher', 'admin'
 
   @override
   void dispose() {
@@ -57,7 +59,11 @@ class _LoginScreenState extends State<LoginScreen> {
               
               // Welcome text
               Text(
-                _isAdminLogin ? 'Login Admin' : 'Selamat Datang!',
+                _loginType == 'admin' 
+                    ? 'Login Admin' 
+                    : _loginType == 'teacher'
+                        ? 'Login Guru'
+                        : 'Selamat Datang!',
                 style: GoogleFonts.poppins(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
@@ -68,9 +74,11 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               
               Text(
-                _isAdminLogin 
+                _loginType == 'admin' 
                     ? 'Masuk sebagai administrator sistem'
-                    : 'Masuk ke akun Seangkatan.id kamu',
+                    : _loginType == 'teacher'
+                        ? 'Masuk sebagai guru'
+                        : 'Masuk ke akun Seangkatan.id kamu',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   color: Colors.grey[600],
@@ -79,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
               
               const SizedBox(height: 24),
               
-              // Toggle untuk login admin
+              // Toggle untuk login type
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -87,37 +95,136 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[200]!),
                 ),
-                child: Row(
+                child: Column(
                   children: [
-                    Icon(
-                      _isAdminLogin ? LucideIcons.shield : LucideIcons.user,
-                      color: _isAdminLogin ? Colors.orange : const Color(0xFF4F46E5),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _isAdminLogin ? 'Login sebagai Admin' : 'Login sebagai Siswa',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF1F2937),
+                    Row(
+                      children: [
+                        Icon(
+                          _loginType == 'admin' 
+                              ? LucideIcons.shield 
+                              : _loginType == 'teacher'
+                                  ? LucideIcons.graduationCap
+                                  : LucideIcons.user,
+                          color: _loginType == 'admin' 
+                              ? Colors.orange 
+                              : _loginType == 'teacher'
+                                  ? Colors.green
+                                  : const Color(0xFF4F46E5),
+                          size: 20,
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _loginType == 'admin' 
+                                ? 'Login sebagai Admin' 
+                                : _loginType == 'teacher'
+                                    ? 'Login sebagai Guru'
+                                    : 'Login sebagai Siswa',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF1F2937),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    Switch(
-                      value: _isAdminLogin,
-                      onChanged: (value) {
-                        setState(() {
-                          _isAdminLogin = value;
-                          // Clear form ketika switch mode
-                          _emailController.clear();
-                          _passwordController.clear();
-                        });
-                      },
-                      activeColor: Colors.orange,
-                      inactiveThumbColor: const Color(0xFF4F46E5),
-                      inactiveTrackColor: const Color(0xFF4F46E5).withValues(alpha: 0.3),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _loginType = 'student';
+                                _emailController.clear();
+                                _passwordController.clear();
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: _loginType == 'student' ? const Color(0xFF4F46E5) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _loginType == 'student' ? const Color(0xFF4F46E5) : Colors.grey[300]!,
+                                ),
+                              ),
+                              child: Text(
+                                'Siswa',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: _loginType == 'student' ? Colors.white : Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _loginType = 'teacher';
+                                _emailController.clear();
+                                _passwordController.clear();
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: _loginType == 'teacher' ? Colors.green : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _loginType == 'teacher' ? Colors.green : Colors.grey[300]!,
+                                ),
+                              ),
+                              child: Text(
+                                'Guru',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: _loginType == 'teacher' ? Colors.white : Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _loginType = 'admin';
+                                _emailController.clear();
+                                _passwordController.clear();
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: _loginType == 'admin' ? Colors.orange : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _loginType == 'admin' ? Colors.orange : Colors.grey[300]!,
+                                ),
+                              ),
+                              child: Text(
+                                'Admin',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: _loginType == 'admin' ? Colors.white : Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -260,7 +367,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               )
                             : Text(
-                                _isAdminLogin ? 'Masuk sebagai Admin' : 'Masuk',
+                                _loginType == 'admin' 
+                                    ? 'Masuk sebagai Admin' 
+                                    : _loginType == 'teacher'
+                                        ? 'Masuk sebagai Guru'
+                                        : 'Masuk',
                                 style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -331,6 +442,41 @@ class _LoginScreenState extends State<LoginScreen> {
               
               const SizedBox(height: 40),
               
+              // School login button
+              Container(
+                width: double.infinity,
+                height: 56,
+                margin: const EdgeInsets.only(bottom: 16),
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SchoolLoginScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    LucideIcons.school,
+                    color: Color(0xFF10B981),
+                    size: 20,
+                  ),
+                  label: Text(
+                    'Login sebagai Sekolah',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF10B981),
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF10B981)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              
               // Register link
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -376,7 +522,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      if (_isAdminLogin) {
+      if (_loginType == 'admin') {
         // Login sebagai admin
         debugPrint('Attempting admin login with email: ${_emailController.text.trim().toLowerCase()}');
         final adminUser = await _adminService.authenticateAdmin(
@@ -395,8 +541,27 @@ class _LoginScreenState extends State<LoginScreen> {
           debugPrint('Admin login failed - invalid credentials');
           throw Exception('Email atau password admin tidak valid');
         }
+      } else if (_loginType == 'teacher') {
+        // Login sebagai guru
+        debugPrint('Attempting teacher login with email: ${_emailController.text.trim()}');
+        final teacherResult = await _authService.signInTeacher(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+
+        debugPrint('Teacher authentication result: ${teacherResult != null ? 'Success' : 'Failed'}');
+        if (teacherResult != null && mounted) {
+          debugPrint('Navigating to teacher dashboard...');
+          // Navigate to teacher dashboard
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const TeacherDashboardScreen()),
+          );
+        } else {
+          debugPrint('Teacher login failed - invalid credentials');
+          throw Exception('Email atau password guru tidak valid');
+        }
       } else {
-        // Login sebagai user biasa
+        // Login sebagai user biasa (siswa)
         await _authService.signInWithEmailAndPassword(
           email: _emailController.text,
           password: _passwordController.text,

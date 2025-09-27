@@ -3,7 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import '../../services/auth_service.dart';
+import '../../services/admin_service.dart';
+import '../../models/admin_models.dart';
 import '../auth/login_screen.dart';
 import 'privacy_policy_screen.dart';
 
@@ -16,6 +19,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
+  final _adminService = AdminService();
   final _classCodeController = TextEditingController();
   final _nameController = TextEditingController();
   final _currentPasswordController = TextEditingController();
@@ -94,15 +98,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
         print('Attempting to update class code: $classCode');
       }
       
+      // First, get school ID from class code
+      String? schoolId;
+      try {
+        final allClassCodes = await _adminService.getAllClassCodes();
+        final matchingClassCode = allClassCodes.firstWhere(
+          (cc) => cc.code.toUpperCase() == classCode.toUpperCase() && cc.isActive,
+          orElse: () => throw Exception('Class code not found'),
+        );
+        schoolId = matchingClassCode.schoolId;
+        
+        if (kDebugMode) {
+          print('Found school ID: $schoolId for class code: $classCode');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error getting school ID from class code: $e');
+        }
+        // Continue with class code update even if school ID fetch fails
+      }
+      
       final success = await _authService.updateUserClassCode(classCode);
       
       // Close loading dialog
       if (mounted) Navigator.of(context).pop();
       
       if (success) {
+        // Update school ID if we found one
+        if (schoolId != null && schoolId.isNotEmpty) {
+          try {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              // Update student's school ID
+               final studentDoc = await _adminService.getStudentById(user.uid);
+               if (studentDoc != null) {
+                 final updatedStudent = Student(
+                   id: studentDoc.id,
+                   name: studentDoc.name,
+                   email: studentDoc.email,
+                   studentId: studentDoc.studentId,
+                   classCodeId: studentDoc.classCodeId,
+                   schoolId: schoolId,
+                   enrolledAt: studentDoc.enrolledAt,
+                   isActive: studentDoc.isActive,
+                   profileImageUrl: studentDoc.profileImageUrl,
+                 );
+                 await _adminService.updateStudent(user.uid, updatedStudent);
+                
+                if (kDebugMode) {
+                  print('Updated student school ID to: $schoolId');
+                }
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error updating school ID: $e');
+            }
+          }
+        }
+        
         setState(() {
           _currentClassCode = classCode.toUpperCase();
         });
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -110,7 +168,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.of(context).pop();
+          
+          // Show restart dialog
+          _showRestartDialog();
         }
       } else {
         if (mounted) {
@@ -141,6 +201,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
+  }
+
+  // Show restart dialog
+  void _showRestartDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Restart Aplikasi'),
+        content: const Text(
+          'Untuk menerapkan perubahan sekolah, aplikasi perlu direstart. Apakah Anda ingin restart sekarang?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).pop(); // Close profile screen
+            },
+            child: const Text('Nanti'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _restartApp();
+            },
+            child: const Text('Restart Sekarang'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Restart the application
+  void _restartApp() {
+    SystemNavigator.pop(); // This will close the app on Android/iOS
+    // Note: On some platforms, you might need additional packages like restart_app
   }
 
   Future<void> _updateDisplayName() async {

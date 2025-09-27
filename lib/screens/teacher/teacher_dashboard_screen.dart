@@ -7,7 +7,6 @@ import 'teacher_subjects_screen.dart';
 import 'teacher_chapter_management_screen.dart';
 
 import 'teacher_profile_screen.dart';
-import 'teacher_task_management_screen.dart';
 import '../auth/login_screen.dart';
 
 class TeacherDashboardScreen extends StatefulWidget {
@@ -239,18 +238,18 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               children: [
                 Expanded(
                   child: _buildStatCard(
-                    'Tugas',
-                    '12',
-                    LucideIcons.fileText,
+                    'Materi',
+                    '25',
+                    LucideIcons.book,
                     const Color(0xFFF59E0B),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildStatCard(
-                    'Materi',
-                    '25',
-                    LucideIcons.book,
+                    'Siswa',
+                    '150',
+                    LucideIcons.users,
                     const Color(0xFFEF4444),
                   ),
                 ),
@@ -306,14 +305,14 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   },
                 ),
                 _buildMenuCard(
-                  'Kelola Tugas',
-                  'Buat dan kelola tugas',
-                  LucideIcons.clipboard,
+                  'Materi Ajar',
+                  'Kelola materi pembelajaran',
+                  LucideIcons.fileText,
                   const Color(0xFF3B82F6),
                   () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const TeacherTaskManagementScreen(),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Fitur materi ajar sedang dalam pengembangan'),
                       ),
                     );
                   },
@@ -377,9 +376,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               child: Column(
                 children: [
                   _buildActivityItem(
-                    'Tugas Matematika Kelas X-A',
-                    'Dikumpulkan 2 jam yang lalu',
-                    LucideIcons.fileText,
+                    'Materi Fisika Bab 3',
+                    'Diupload 2 jam yang lalu',
+                    LucideIcons.book,
                     const Color(0xFF10B981),
                   ),
                   const Divider(),

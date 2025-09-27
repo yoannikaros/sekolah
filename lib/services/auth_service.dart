@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:math';
 import '../models/admin_models.dart';
 import '../models/social_media_models.dart';
+import 'admin_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -542,6 +543,115 @@ class AuthService {
         print('Error creating/updating user profile: $e');
       }
       return false;
+    }
+  }
+
+  // Create student profile in students collection
+  Future<bool> createStudentProfile({
+    required String name,
+    required String email,
+    String? classCode,
+    String? phone,
+    String? address,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        if (kDebugMode) {
+          print('No current user found when creating student profile');
+        }
+        return false;
+      }
+
+      if (kDebugMode) {
+        print('Creating student profile for user: ${user.uid}');
+      }
+
+      // Check if student profile already exists
+      final existingStudent = await _firestore.collection('students').doc(user.uid).get();
+      if (existingStudent.exists) {
+        if (kDebugMode) {
+          print('Student profile already exists for user: ${user.uid}');
+        }
+        return true; // Already exists, no need to create
+      }
+
+      final student = Student(
+        id: user.uid, // Use Firebase Auth UID as document ID
+        name: name,
+        email: email,
+        studentId: user.uid, // Use Firebase Auth UID as student ID
+        classCodeId: classCode ?? '',
+        schoolId: '', // Default empty school ID
+        enrolledAt: DateTime.now(),
+        isActive: true,
+      );
+
+      // Use the modified createStudent method with UID parameter
+      final adminService = AdminService();
+      final result = await adminService.createStudent(student, uid: user.uid);
+      
+      if (kDebugMode) {
+        print('Student profile created successfully for user: ${user.uid}');
+      }
+      return result != null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error creating student profile: $e');
+      }
+      return false;
+    }
+  }
+
+  // Get or create student profile
+  Future<Map<String, dynamic>?> getOrCreateStudentProfile({
+    required String name,
+    required String email,
+    String? classCode,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      // First try to get existing student profile
+      final studentDoc = await _firestore.collection('students').doc(user.uid).get();
+      
+      if (studentDoc.exists) {
+        final studentData = studentDoc.data()!;
+        studentData['id'] = studentDoc.id;
+        if (kDebugMode) {
+          print('Found existing student profile for user: ${user.uid}');
+        }
+        return studentData;
+      }
+
+      // If doesn't exist, create new student profile
+      if (kDebugMode) {
+        print('Student profile not found, creating new one for user: ${user.uid}');
+      }
+      
+      final success = await createStudentProfile(
+        name: name,
+        email: email,
+        classCode: classCode,
+      );
+
+      if (success) {
+        // Fetch the newly created profile
+        final newStudentDoc = await _firestore.collection('students').doc(user.uid).get();
+        if (newStudentDoc.exists) {
+          final studentData = newStudentDoc.data()!;
+          studentData['id'] = newStudentDoc.id;
+          return studentData;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting or creating student profile: $e');
+      }
+      return null;
     }
   }
 }

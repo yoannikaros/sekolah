@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
-import 'student_task_submission_screen.dart';
+import 'quiz_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -182,13 +182,13 @@ class ClassScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Task Submission Card
+            // Quiz Card
             GestureDetector(
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const StudentTaskSubmissionScreen(),
+                    builder: (context) => const QuizScreen(),
                   ),
                 );
               },
@@ -219,7 +219,7 @@ class ClassScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Icon(
-                              LucideIcons.fileText,
+                              LucideIcons.brain,
                               color: Color(0xFF4F46E5),
                               size: 24,
                             ),
@@ -230,7 +230,7 @@ class ClassScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Pengumpulan Tugas",
+                                  "Kuis Interaktif",
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -239,7 +239,7 @@ class ClassScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  "Lihat dan kumpulkan tugas dari guru",
+                                  "Ikuti kuis dan latihan soal",
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
                                     color: const Color(0xFF64748B),

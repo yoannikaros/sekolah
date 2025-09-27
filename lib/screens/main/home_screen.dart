@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:sekangkatanapp/screens/main/student_materi_screen.dart';
 import '../../services/auth_service.dart';
 import 'quiz_screen.dart';
 import 'social_media_screen.dart';
 
-import 'student_task_submission_screen.dart';
 import 'event_planner_student_screen.dart';
 import '../chat/chat_room_list_screen.dart';
 import 'ai_chat_screen.dart';
@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<MenuData> _menuItems = [
     MenuData(
       name: "Wali Kelas Virtual 0.1",
-      description: "Nada ramah, reminder tugas, etika online dasar",
+      description: "Nada ramah, reminder kegiatan, etika online dasar",
       icon: LucideIcons.userCheck,
       color: const Color(0xFF3B82F6),
       isAvailable: true,
@@ -58,13 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
       color: const Color(0xFF10B981),
       isAvailable: true,
     ),
-    MenuData(
-      name: "Mading Online",
-      description: "Karya gambar/foto tugas; komentar terkurasi",
-      icon: LucideIcons.clipboard,
-      color: const Color(0xFF8B5CF6),
-      isAvailable: true,
-    ),
+
     MenuData(
       name: "Galeri Foto",
       description: "Album kegiatan kelas, watermark sekolah",
@@ -309,15 +303,14 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildQuickActionCard(
-                  "Tugas Kelas",
-                  LucideIcons.video,
+                  "Kuis Kelas",
+                  LucideIcons.brain,
                   const Color(0xFF3B82F6),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder:
-                            (context) => const StudentTaskSubmissionScreen(),
+                        builder: (context) => const QuizScreen(),
                       ),
                     );
                   },
@@ -330,11 +323,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   LucideIcons.fileText,
                   const Color(0xFF10B981),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fitur materi sedang dalam pengembangan'),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StudentMateriScreen(),
                       ),
                     );
+                  
                   },
                 ),
               ),

@@ -7,12 +7,13 @@ import 'admin_students_screen.dart';
 import 'admin_schools_screen.dart';
 import 'admin_subjects_screen.dart';
 import 'admin_teachers_screen.dart';
+import 'admin_materi_screen.dart';
+import 'admin_task_screen.dart';
 import 'chapter_management_screen.dart';
-import 'mading_management_screen.dart';
+
 import 'gallery_management_screen.dart';
 import 'event_planner_management_screen.dart';
 import 'ai_chat_config_screen.dart';
-import 'task_management_screen.dart';
 
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -313,12 +314,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                               children: [
                                 _buildManagementCard(
                                   'Kelola Materi',
-                                  'Fitur dalam pengembangan',
+                                  'Kelola materi pembelajaran dengan detail dan video YouTube',
                                   Icons.library_books_rounded,
-                                  const Color(0xFF3F51B5),
-                                  () => ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Fitur kelola materi sedang dalam pengembangan'),
+                                  const Color(0xFF8BC34A),
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) =>
+                                              const AdminMateriScreen(),
                                     ),
                                   ),
                                 ),
@@ -337,16 +341,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   ),
                                 ),
                                 _buildManagementCard(
-                                  'Kelola Tugas',
-                                  'Kelola tugas siswa dengan tanggal, kelas, dan komentar',
-                                  Icons.assignment_rounded,
+                                  'Kelola Kuis',
+                                  'Kelola Bab, Kuis, dan Soal dengan sistem bertingkat',
+                                  Icons.quiz_rounded,
                                   const Color(0xFF673AB7),
                                   () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder:
-                                          (context) =>
-                                              const TaskManagementScreen(),
+                                      builder: (context) =>
+                                          const ChapterManagementScreen(),
                                     ),
                                   ),
                                 ),
@@ -421,19 +424,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                   ),
                                 ),
                                 _buildManagementCard(
-                                  'Kelola Mading Online',
-                                  'Kelola karya gambar/foto tugas dan komentar terkurasi',
-                                  Icons.dashboard_rounded,
+                                  'Kelola Tugas',
+                                  'Kelola tugas, deadline, dan pengumpulan siswa',
+                                  Icons.assignment_rounded,
                                   const Color(0xFFFF5722),
                                   () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder:
                                           (context) =>
-                                              const MadingManagementScreen(),
+                                              const AdminTaskScreen(),
                                     ),
                                   ),
                                 ),
+
                                 _buildManagementCard(
                                   'Kelola Galeri Foto',
                                   'Kelola album kegiatan kelas dengan watermark sekolah',

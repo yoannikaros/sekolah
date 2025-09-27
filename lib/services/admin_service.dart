@@ -383,10 +383,17 @@ class AdminService {
   }
 
   // Student CRUD Operations
-  Future<String?> createStudent(Student student) async {
+  Future<String?> createStudent(Student student, {String? uid}) async {
     try {
-      final docRef = await _firestore.collection('students').add(student.toJson());
-      return docRef.id;
+      if (uid != null) {
+        // Use the provided UID as document ID (for Firebase Auth users)
+        await _firestore.collection('students').doc(uid).set(student.toJson());
+        return uid;
+      } else {
+        // Use auto-generated ID (for admin-created students)
+        final docRef = await _firestore.collection('students').add(student.toJson());
+        return docRef.id;
+      }
     } catch (e) {
       // Error creating student: $e
       return null;
@@ -449,13 +456,19 @@ class AdminService {
 
   Future<Student?> getStudentById(String id) async {
     try {
+      if (kDebugMode) print('DEBUG: Attempting to get student by ID: $id');
       final doc = await _firestore.collection('students').doc(id).get();
       if (doc.exists) {
-        return Student.fromJson({...doc.data()!, 'id': doc.id});
+        if (kDebugMode) print('DEBUG: Student document found, parsing data...');
+        final student = Student.fromJson({...doc.data()!, 'id': doc.id});
+        if (kDebugMode) print('DEBUG: Student parsed successfully: ${student.name} (${student.email})');
+        return student;
+      } else {
+        if (kDebugMode) print('DEBUG: Student document does not exist for ID: $id');
+        return null;
       }
-      return null;
     } catch (e) {
-      // Error getting student: $e
+      if (kDebugMode) print('DEBUG: Error getting student by ID $id: $e');
       return null;
     }
   }
@@ -1761,305 +1774,6 @@ class AdminService {
     }
   }
 
-  // Task Management CRUD Operations
-  Future<String?> createTask(AdminTask task) async {
-    try {
-      final taskData = {
-        'tanggalDibuat': task.tanggalDibuat.toIso8601String(),
-        'kodeKelas': task.kodeKelas,
-        'mataPelajaran': task.mataPelajaran,
-        'judul': task.judul,
-        'deskripsi': task.deskripsi,
-        'linkSoal': task.linkSoal,
-        'tanggalDibuka': task.tanggalDibuka.toIso8601String(),
-        'tanggalBerakhir': task.tanggalBerakhir.toIso8601String(),
-        'linkPdf': task.linkPdf,
-        'komentar': task.komentar.map((comment) => comment.toJson()).toList(),
-        'submissions': task.submissions.map((submission) => submission.toJson()).toList(),
-        'createdBy': task.createdBy,
-        'createdAt': task.createdAt.toIso8601String(),
-        'updatedAt': task.updatedAt.toIso8601String(),
-        'isActive': task.isActive,
-      };
-      
-      final docRef = await _firestore.collection('admin_tasks').add(taskData);
-      if (kDebugMode) {
-        print('Task created successfully with ID: ${docRef.id}');
-      }
-      return docRef.id;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error creating task: $e');
-      }
-      return null;
-    }
-  }
-
-  Future<bool> updateTask(String id, AdminTask task) async {
-    try {
-      final taskData = {
-        'tanggalDibuat': task.tanggalDibuat.toIso8601String(),
-        'kodeKelas': task.kodeKelas,
-        'mataPelajaran': task.mataPelajaran,
-        'judul': task.judul,
-        'deskripsi': task.deskripsi,
-        'linkSoal': task.linkSoal,
-        'tanggalDibuka': task.tanggalDibuka.toIso8601String(),
-        'tanggalBerakhir': task.tanggalBerakhir.toIso8601String(),
-        'linkPdf': task.linkPdf,
-        'komentar': task.komentar.map((comment) => comment.toJson()).toList(),
-        'submissions': task.submissions.map((submission) => submission.toJson()).toList(),
-        'updatedAt': DateTime.now().toIso8601String(),
-        'isActive': task.isActive,
-      };
-      
-      await _firestore.collection('admin_tasks').doc(id).update(taskData);
-      if (kDebugMode) {
-        print('Task updated successfully');
-      }
-      return true;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error updating task: $e');
-      }
-      return false;
-    }
-  }
-
-  Future<bool> deleteTask(String id) async {
-    try {
-      await _firestore.collection('admin_tasks').doc(id).update({
-        'isActive': false,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
-      if (kDebugMode) {
-        print('Task deleted successfully');
-      }
-      return true;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error deleting task: $e');
-      }
-      return false;
-    }
-  }
-
-  Future<List<AdminTask>> getAllTasks() async {
-    try {
-      if (kDebugMode) {
-        print('=== STARTING getAllTasks() ===');
-        print('Fetching all tasks from Firebase...');
-      }
-      
-      // First, try to get all tasks without isActive filter to debug
-      final querySnapshot = await _firestore
-          .collection('admin_tasks')
-          .orderBy('createdAt', descending: true)
-          .get();
-
-      if (kDebugMode) {
-        print('=== FIREBASE QUERY RESULT ===');
-        print('Total documents in admin_tasks collection: ${querySnapshot.docs.length}');
-        
-        if (querySnapshot.docs.isEmpty) {
-          print('WARNING: No documents found in admin_tasks collection!');
-          print('This means either:');
-          print('1. No tasks have been created yet');
-          print('2. Collection name is incorrect');
-          print('3. Firebase rules are blocking access');
-        } else {
-          print('=== DOCUMENTS FOUND ===');
-          for (var doc in querySnapshot.docs) {
-            print('Document ID: ${doc.id}');
-            print('Document Data: ${doc.data()}');
-            print('---');
-          }
-        }
-      }
-
-      final tasks = <AdminTask>[];
-      if (kDebugMode) {
-        print('=== PROCESSING DOCUMENTS ===');
-        print('Starting to process ${querySnapshot.docs.length} documents...');
-      }
-      
-      for (final doc in querySnapshot.docs) {
-        try {
-          final data = doc.data();
-          
-          if (kDebugMode) {
-            print('Processing document ${doc.id}:');
-            print('  isActive: ${data['isActive']}');
-          }
-          
-          // Check if task is active (include documents that don't have isActive field or have isActive = true)
-          if (data['isActive'] == false) {
-            if (kDebugMode) {
-              print('  -> Skipping inactive task: ${doc.id}');
-            }
-            continue;
-          }
-          
-          if (kDebugMode) {
-            print('  -> Processing active task: ${doc.id}');
-          }
-          
-          data['id'] = doc.id;
-          
-          // No need to manually parse dates anymore - the DateTimeConverter handles it
-          // Parse comments
-          if (data['komentar'] is List) {
-            final commentsList = <TaskComment>[];
-            for (final commentData in data['komentar']) {
-              if (commentData is Map<String, dynamic>) {
-                commentsList.add(TaskComment.fromJson(commentData));
-              }
-            }
-            data['komentar'] = commentsList;
-          } else {
-            data['komentar'] = <TaskComment>[];
-          }
-          
-          // Parse submissions (removed duplicate code)
-          if (data['submissions'] is List) {
-            final submissionsList = <StudentSubmission>[];
-            for (final submissionData in data['submissions']) {
-              if (submissionData is Map<String, dynamic>) {
-                submissionsList.add(StudentSubmission.fromJson(submissionData));
-              }
-            }
-            data['submissions'] = submissionsList;
-          } else {
-            data['submissions'] = <StudentSubmission>[];
-          }
-          
-          final task = AdminTask.fromJson(data);
-          tasks.add(task);
-          
-          if (kDebugMode) {
-            print('  -> Successfully parsed task: ${task.judul} (ID: ${task.id})');
-          }
-        } catch (e, stackTrace) {
-          if (kDebugMode) {
-            print('  -> ERROR parsing task document ${doc.id}: $e');
-            print('  -> Document data: ${doc.data()}');
-            print('  -> Stack trace: $stackTrace');
-          }
-        }
-      }
-
-      if (kDebugMode) {
-        print('=== FINAL RESULT ===');
-        print('Retrieved ${tasks.length} active tasks from Firebase');
-        if (tasks.isNotEmpty) {
-          print('Tasks found:');
-          for (var task in tasks) {
-            print('  - ${task.judul} (Class: ${task.kodeKelas}, Subject: ${task.mataPelajaran})');
-          }
-        } else {
-          print('NO TASKS FOUND! This could be because:');
-          print('1. All tasks have isActive = false');
-          print('2. Tasks exist but failed to parse');
-          print('3. No tasks exist in the collection');
-        }
-      }
-
-      return tasks;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching tasks: $e');
-        print('Stack trace: ${StackTrace.current}');
-      }
-      return [];
-    }
-  }
-
-  Future<AdminTask?> getTaskById(String id) async {
-    try {
-      final doc = await _firestore.collection('admin_tasks').doc(id).get();
-      
-      if (!doc.exists) return null;
-      
-      final data = doc.data()!;
-      data['id'] = doc.id;
-      
-      // No manual date parsing needed - DateTimeConverter handles it automatically
-      
-      return AdminTask.fromJson(data);
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching task: $e');
-      }
-      return null;
-    }
-  }
-
-  Future<bool> addTaskComment(String taskId, TaskComment comment) async {
-    try {
-      final task = await getTaskById(taskId);
-      if (task == null) return false;
-      
-      final updatedComments = List<TaskComment>.from(task.komentar);
-      updatedComments.add(comment);
-      
-      final updatedTask = task.copyWith(
-        komentar: updatedComments,
-        updatedAt: DateTime.now(),
-      );
-      
-      return await updateTask(taskId, updatedTask);
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error adding task comment: $e');
-      }
-      return false;
-    }
-  }
-
-  Future<List<AdminTask>> getTasksByClassCode(String classCode) async {
-    try {
-      if (kDebugMode) print('DEBUG: Fetching tasks for class code: $classCode');
-      final querySnapshot = await _firestore
-          .collection('admin_tasks')
-          .where('isActive', isEqualTo: true)
-          .where('kodeKelas', isEqualTo: classCode)
-          .get();
-
-      if (kDebugMode) print('DEBUG: Found ${querySnapshot.docs.length} documents in admin_tasks collection');
-
-      final tasks = <AdminTask>[];
-      for (final doc in querySnapshot.docs) {
-        try {
-          final data = doc.data();
-          data['id'] = doc.id;
-          
-          if (kDebugMode) print('DEBUG: Processing task document ${doc.id}: ${data['judul']}');
-          
-          // No manual date parsing needed - DateTimeConverter handles it automatically
-          
-          final task = AdminTask.fromJson(data);
-          tasks.add(task);
-          if (kDebugMode) print('DEBUG: Successfully parsed task: ${task.judul}');
-        } catch (e) {
-          if (kDebugMode) {
-            print('Error parsing task document ${doc.id}: $e');
-          }
-        }
-      }
-
-      // Sort tasks by creation date in memory instead of in query
-      tasks.sort((a, b) => b.tanggalDibuat.compareTo(a.tanggalDibuat));
-
-      if (kDebugMode) print('DEBUG: Successfully parsed ${tasks.length} tasks');
-      return tasks;
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error fetching tasks by class code: $e');
-      }
-      return [];
-    }
-  }
-
   // School Account Operations
   Future<SchoolAccount?> getSchoolAccountByEmail(String email) async {
     try {
@@ -2215,12 +1929,19 @@ class AdminService {
 
   Future<List<Subject>> getSubjectsBySchool(String schoolId) async {
     try {
+      if (kDebugMode) {
+        print('DEBUG: Fetching subjects for school ID: $schoolId');
+      }
+      
       final querySnapshot = await _firestore
           .collection('subjects')
           .where('schoolId', isEqualTo: schoolId)
           .where('isActive', isEqualTo: true)
-          .orderBy('createdAt', descending: true)
           .get();
+
+      if (kDebugMode) {
+        print('DEBUG: Found ${querySnapshot.docs.length} subjects for school');
+      }
 
       final subjects = <Subject>[];
       for (final doc in querySnapshot.docs) {
@@ -2238,9 +1959,20 @@ class AdminService {
           
           final subject = Subject.fromJson(data);
           subjects.add(subject);
+          
+          if (kDebugMode) {
+            print('DEBUG: Parsed subject: ${subject.name} (${subject.code})');
+          }
         } catch (e) {
           debugPrint('Error parsing subject document ${doc.id}: $e');
         }
+      }
+
+      // Sort after fetching to avoid index issues
+      subjects.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      if (kDebugMode) {
+        print('DEBUG: Returning ${subjects.length} subjects');
       }
 
       return subjects;

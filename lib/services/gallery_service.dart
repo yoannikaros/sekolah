@@ -133,6 +133,7 @@ class GalleryService {
     try {
       Query query = _firestore.collection('gallery_photos');
       
+      // Apply filters one by one to avoid complex index requirements while building
       if (schoolId != null) {
         query = query.where('schoolId', isEqualTo: schoolId);
       }
@@ -143,15 +144,47 @@ class GalleryService {
         query = query.where('albumId', isEqualTo: albumId);
       }
       
-      query = query.where('isActive', isEqualTo: true)
-                  .orderBy('createdAt', descending: true)
-                  .limit(limit);
+      query = query.where('isActive', isEqualTo: true);
       
-      final querySnapshot = await query.get();
-      
-      return querySnapshot.docs.map((doc) {
-        return _mapToGalleryPhoto(doc.id, doc.data() as Map<String, dynamic>);
-      }).toList();
+      // Try with orderBy first, if it fails, fallback to simple query
+      try {
+        query = query.orderBy('createdAt', descending: true).limit(limit);
+        final querySnapshot = await query.get();
+        
+        return querySnapshot.docs.map((doc) {
+          return _mapToGalleryPhoto(doc.id, doc.data() as Map<String, dynamic>);
+        }).toList();
+      } catch (indexError) {
+        if (kDebugMode) {
+          print('Index still building, using fallback query without orderBy: $indexError');
+        }
+        
+        // Fallback: Query without orderBy and sort in memory
+        Query fallbackQuery = _firestore.collection('gallery_photos');
+        
+        if (schoolId != null) {
+          fallbackQuery = fallbackQuery.where('schoolId', isEqualTo: schoolId);
+        }
+        if (classCode != null) {
+          fallbackQuery = fallbackQuery.where('classCode', isEqualTo: classCode);
+        }
+        if (albumId != null) {
+          fallbackQuery = fallbackQuery.where('albumId', isEqualTo: albumId);
+        }
+        
+        fallbackQuery = fallbackQuery.where('isActive', isEqualTo: true).limit(limit);
+        
+        final querySnapshot = await fallbackQuery.get();
+        
+        List<GalleryPhoto> photos = querySnapshot.docs.map((doc) {
+          return _mapToGalleryPhoto(doc.id, doc.data() as Map<String, dynamic>);
+        }).toList();
+        
+        // Sort in memory by createdAt descending
+        photos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        
+        return photos.take(limit).toList();
+      }
     } catch (e) {
       if (kDebugMode) {
         print('Error getting gallery photos: $e');
@@ -471,5 +504,352 @@ class GalleryService {
       }
       return [];
     }
+  }
+
+  // Like Operations
+  Future<String?> likePhoto({
+    required String photoId,
+    required String studentId,
+    required String studentName,
+    required String schoolId,
+  }) async {
+    try {
+      // Check if already liked
+      final existingLike = await _firestore
+          .collection('gallery_likes')
+          .where('photoId', isEqualTo: photoId)
+          .where('studentId', isEqualTo: studentId)
+          .get();
+
+      if (existingLike.docs.isNotEmpty) {
+        if (kDebugMode) {
+          print('Photo already liked by this student');
+        }
+        return existingLike.docs.first.id;
+      }
+
+      final likeData = {
+        'photoId': photoId,
+        'studentId': studentId,
+        'studentName': studentName,
+        'schoolId': schoolId,
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+      final docRef = await _firestore.collection('gallery_likes').add(likeData);
+      
+      if (kDebugMode) {
+        print('Photo liked successfully with ID: ${docRef.id}');
+      }
+      return docRef.id;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error liking photo: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<bool> unlikePhoto({
+    required String photoId,
+    required String studentId,
+  }) async {
+    try {
+      final likeQuery = await _firestore
+          .collection('gallery_likes')
+          .where('photoId', isEqualTo: photoId)
+          .where('studentId', isEqualTo: studentId)
+          .get();
+
+      if (likeQuery.docs.isEmpty) {
+        if (kDebugMode) {
+          print('Like not found');
+        }
+        return false;
+      }
+
+      await _firestore.collection('gallery_likes').doc(likeQuery.docs.first.id).delete();
+      
+      if (kDebugMode) {
+        print('Photo unliked successfully');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error unliking photo: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<List<GalleryLike>> getPhotoLikes(String photoId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('gallery_likes')
+          .where('photoId', isEqualTo: photoId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        return _mapToGalleryLike(doc.id, doc.data());
+      }).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting photo likes: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<int> getPhotoLikeCount(String photoId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('gallery_likes')
+          .where('photoId', isEqualTo: photoId)
+          .get();
+
+      return querySnapshot.docs.length;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting photo like count: $e');
+      }
+      return 0;
+    }
+  }
+
+  Future<bool> isPhotoLikedByStudent({
+    required String photoId,
+    required String studentId,
+  }) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('gallery_likes')
+          .where('photoId', isEqualTo: photoId)
+          .where('studentId', isEqualTo: studentId)
+          .get();
+
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error checking if photo is liked: $e');
+      }
+      return false;
+    }
+  }
+
+  // Comment Operations
+  Future<String?> addComment({
+    required String photoId,
+    required String studentId,
+    required String studentName,
+    required String schoolId,
+    required String comment,
+  }) async {
+    try {
+      final commentData = {
+        'photoId': photoId,
+        'studentId': studentId,
+        'studentName': studentName,
+        'schoolId': schoolId,
+        'comment': comment,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': null,
+        'isActive': true,
+      };
+
+      final docRef = await _firestore.collection('gallery_comments').add(commentData);
+      
+      if (kDebugMode) {
+        print('Comment added successfully with ID: ${docRef.id}');
+      }
+      return docRef.id;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error adding comment: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<bool> updateComment({
+    required String commentId,
+    required String comment,
+  }) async {
+    try {
+      await _firestore.collection('gallery_comments').doc(commentId).update({
+        'comment': comment,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      
+      if (kDebugMode) {
+        print('Comment updated successfully');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating comment: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> deleteComment(String commentId) async {
+    try {
+      await _firestore.collection('gallery_comments').doc(commentId).update({
+        'isActive': false,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      
+      if (kDebugMode) {
+        print('Comment deleted successfully');
+      }
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting comment: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<List<GalleryComment>> getPhotoComments(String photoId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('gallery_comments')
+          .where('photoId', isEqualTo: photoId)
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: false)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        return _mapToGalleryComment(doc.id, doc.data());
+      }).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting photo comments: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<int> getPhotoCommentCount(String photoId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('gallery_comments')
+          .where('photoId', isEqualTo: photoId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return querySnapshot.docs.length;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting photo comment count: $e');
+      }
+      return 0;
+    }
+  }
+
+  // Get photo with stats (likes and comments)
+  Future<GalleryPhotoWithStats?> getPhotoWithStats({
+    required String photoId,
+    required String currentStudentId,
+  }) async {
+    try {
+      final photo = await getGalleryPhoto(photoId);
+      if (photo == null) return null;
+
+      final likeCount = await getPhotoLikeCount(photoId);
+      final commentCount = await getPhotoCommentCount(photoId);
+      final isLiked = await isPhotoLikedByStudent(
+        photoId: photoId,
+        studentId: currentStudentId,
+      );
+      final likes = await getPhotoLikes(photoId);
+      final comments = await getPhotoComments(photoId);
+
+      return GalleryPhotoWithStats(
+        photo: photo,
+        likeCount: likeCount,
+        commentCount: commentCount,
+        isLikedByCurrentUser: isLiked,
+        likes: likes,
+        comments: comments,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting photo with stats: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<List<GalleryPhotoWithStats>> getPhotosWithStats({
+    String? schoolId,
+    String? classCode,
+    String? albumId,
+    required String currentStudentId,
+    int limit = 50,
+  }) async {
+    try {
+      final photos = await getGalleryPhotos(
+        schoolId: schoolId,
+        classCode: classCode,
+        albumId: albumId,
+        limit: limit,
+      );
+
+      final List<GalleryPhotoWithStats> photosWithStats = [];
+
+      for (final photo in photos) {
+        final likeCount = await getPhotoLikeCount(photo.id);
+        final commentCount = await getPhotoCommentCount(photo.id);
+        final isLiked = await isPhotoLikedByStudent(
+          photoId: photo.id,
+          studentId: currentStudentId,
+        );
+
+        photosWithStats.add(GalleryPhotoWithStats(
+          photo: photo,
+          likeCount: likeCount,
+          commentCount: commentCount,
+          isLikedByCurrentUser: isLiked,
+          likes: [],
+          comments: [],
+        ));
+      }
+
+      return photosWithStats;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting photos with stats: $e');
+      }
+      return [];
+    }
+  }
+
+  // Helper methods for mapping
+  GalleryLike _mapToGalleryLike(String id, Map<String, dynamic> data) {
+    return GalleryLike(
+      id: id,
+      photoId: data['photoId'] ?? '',
+      studentId: data['studentId'] ?? '',
+      studentName: data['studentName'] ?? '',
+      schoolId: data['schoolId'] ?? '',
+      createdAt: DateTime.parse(data['createdAt'] ?? DateTime.now().toIso8601String()),
+    );
+  }
+
+  GalleryComment _mapToGalleryComment(String id, Map<String, dynamic> data) {
+    return GalleryComment(
+      id: id,
+      photoId: data['photoId'] ?? '',
+      studentId: data['studentId'] ?? '',
+      studentName: data['studentName'] ?? '',
+      schoolId: data['schoolId'] ?? '',
+      comment: data['comment'] ?? '',
+      createdAt: DateTime.parse(data['createdAt'] ?? DateTime.now().toIso8601String()),
+      updatedAt: data['updatedAt'] != null ? DateTime.parse(data['updatedAt']) : null,
+      isActive: data['isActive'] ?? true,
+    );
   }
 }

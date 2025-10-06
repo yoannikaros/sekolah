@@ -703,6 +703,8 @@ class _ChapterManagementScreenState extends State<ChapterManagementScreen> {
         description: description.trim().isEmpty ? null : description.trim(),
         subjectName: subject.name,
         classCode: classCode.code,
+        schoolId: subject.schoolId,
+        teacherId: classCode.teacherId, // Use teacherId from classCode
         createdAt: isEdit ? _chapterSummaries.firstWhere((s) => s.chapter.id == chapterId).chapter.createdAt : DateTime.now(),
         updatedAt: DateTime.now(),
         isActive: true,

@@ -25,6 +25,7 @@ class _SocialMediaScreenState extends State<SocialMediaScreen>
   late TabController _tabController;
   PostType? _selectedFilter;
   String? _currentClassCode;
+  String? _currentUserName;
   List<SocialMediaPost> _posts = [];
   bool _isLoading = false;
   bool _hasMore = true;
@@ -53,6 +54,7 @@ class _SocialMediaScreenState extends State<SocialMediaScreen>
       final userProfile = await _authService.getCurrentUserProfile();
       setState(() {
         _currentClassCode = userProfile?.classCode;
+        _currentUserName = userProfile?.name ?? 'User';
       });
     } catch (e) {
       debugPrint('Error loading class code: $e');
@@ -143,566 +145,689 @@ class _SocialMediaScreenState extends State<SocialMediaScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            SliverAppBar(
-              expandedHeight: 140,
-              floating: false,
-              pinned: true,
-              backgroundColor: Colors.white,
-              elevation: 0,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Color(0xFF667EEA),
-                                      Color(0xFF764BA2),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF667EEA).withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  LucideIcons.users,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Social Media',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF1F2937),
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Berbagi dan terhubung dengan teman',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Color(0xFF6B7280),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF3F4F6),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(
-                                    LucideIcons.search,
-                                    color: Color(0xFF6B7280),
-                                    size: 20,
-                                  ),
-                                  onPressed: _showSearchDialog,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(52),
-                child: Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      onTap: (_) => _onTabChanged(),
-                      indicator: BoxDecoration(
-                        color: const Color(0xFF667EEA),
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF667EEA).withValues(alpha: 0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      dividerColor: Colors.transparent,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: const Color(0xFF6B7280),
-                      labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                      unselectedLabelStyle: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 15,
-                      ),
-                      tabs: [
-                        const Tab(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(LucideIcons.heart, size: 16),
-                              SizedBox(width: 6),
-                              Text('For you'),
-                            ],
-                          ),
-                        ),
-                        Tab(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(LucideIcons.users2, size: 16),
-                              const SizedBox(width: 6),
-                              Text(_currentClassCode ?? 'Kode Kelas'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ];
-        },
-        body: Column(
+      backgroundColor: const Color(0xFFFAFAFA), // Slightly warmer background
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        shadowColor: Colors.black.withValues(alpha: 0.1),
+        surfaceTintColor: Colors.transparent,
+        title: Row(
           children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refreshPosts,
-                child: _buildPostsList(),
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToCreatePost(),
-        backgroundColor: const Color(0xFF667EEA),
-        elevation: 8,
-        child: const Icon(LucideIcons.plus, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildPostsList() {
-    if (_isLoading && _posts.isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF667EEA),
-        ),
-      );
-    }
-
-    if (_posts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+            // Logo/Icon with modern gradient
             Container(
-              width: 80,
-              height: 80,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
-                LucideIcons.messageSquare,
-                size: 40,
-                color: Colors.grey[400],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Belum ada postingan',
-              style: TextStyle(
-                fontSize: 20,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Jadilah yang pertama membuat postingan!',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[500],
-              ),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () => _navigateToCreatePost(),
-              icon: const Icon(LucideIcons.plus),
-              label: const Text('Buat Postingan'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF667EEA),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A1A1A), Color(0xFF404040)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: _posts.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _posts.length) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(
-                color: Color(0xFF667EEA),
-              ),
-            ),
-          );
-        }
-
-        return _buildModernPostCard(_posts[index]);
-      },
-    );
-  }
-
-  Widget _buildModernPostCard(SocialMediaPost post) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _navigateToPostDetail(post),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildModernPostHeader(post),
-              const SizedBox(height: 16),
-              _buildPostContent(post),
-              const SizedBox(height: 16),
-              _buildModernPostActions(post),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernPostHeader(SocialMediaPost post) {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: () => _navigateToProfile(post.authorId, post.authorName),
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Center(
-              child: Text(
-                post.authorName.isNotEmpty 
-                    ? post.authorName[0].toUpperCase()
-                    : 'U',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => _navigateToProfile(post.authorId, post.authorName),
-                    child: Text(
-                      post.authorName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF1F2937),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: post.type == PostType.topic
-                          ? const Color(0xFFEBF4FF)
-                          : const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      post.type == PostType.topic ? 'Topik' : 'Status',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: post.type == PostType.topic
-                            ? const Color(0xFF1E40AF)
-                            : const Color(0xFF166534),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _formatDateTime(post.createdAt),
-                style: const TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (post.authorId == _socialMediaService.currentUserId)
-          PopupMenuButton<String>(
-            onSelected: (value) => _handlePostAction(value, post),
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.edit2, size: 16),
-                    SizedBox(width: 8),
-                    Text('Edit'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.trash2, size: 16, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Hapus', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                   BoxShadow(
+                     color: Colors.black.withValues(alpha: 0.1),
+                     blurRadius: 8,
+                     offset: const Offset(0, 2),
+                   ),
+                 ],
               ),
               child: const Icon(
-                LucideIcons.moreVertical,
-                color: Color(0xFF6B7280),
-                size: 16,
+                LucideIcons.atSign,
+                color: Colors.white,
+                size: 20,
               ),
             ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildPostContent(SocialMediaPost post) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          post.content,
-          style: const TextStyle(
-            fontSize: 16,
-            height: 1.5,
-            color: Color(0xFF374151),
-          ),
-        ),
-        if (post.isModerated)
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF3C7),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFD97706)),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  LucideIcons.shield,
-                  size: 16,
-                  color: Color(0xFFD97706),
+            const Spacer(),
+            // Menu icon with modern styling
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: IconButton(
+                onPressed: () {},
+                icon: const Icon(
+                  LucideIcons.menu,
+                  color: Color(0xFF1A1A1A),
+                  size: 22,
                 ),
-                SizedBox(width: 8),
-                Text(
-                  'Konten telah dimoderasi',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFFD97706),
-                    fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(52),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                 BoxShadow(
+                   color: Colors.black.withValues(alpha: 0.05),
+                   blurRadius: 4,
+                   offset: const Offset(0, 1),
+                 ),
+               ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      _tabController.animateTo(0);
+                      _onTabChanged();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _tabController.index == 0 
+                                ? const Color(0xFF1A1A1A)
+                                : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'For you',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: _tabController.index == 0 
+                              ? FontWeight.w700 
+                              : FontWeight.w500,
+                          color: _tabController.index == 0 
+                              ? const Color(0xFF1A1A1A)
+                              : const Color(0xFF666666),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      _tabController.animateTo(1);
+                      _onTabChanged();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _tabController.index == 1 
+                                ? const Color(0xFF1A1A1A)
+                                : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        _currentClassCode ?? 'Kelas',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: _tabController.index == 1 
+                              ? FontWeight.w700 
+                              : FontWeight.w500,
+                          color: _tabController.index == 1 
+                              ? const Color(0xFF1A1A1A)
+                              : const Color(0xFF666666),
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        if (post.isEdited)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Diedit • ${_formatDateTime(post.updatedAt ?? post.createdAt)}',
-              style: const TextStyle(
-                fontSize: 12,
-                color: Color(0xFF9CA3AF),
-                fontStyle: FontStyle.italic,
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(), // Disable swipe
+        children: [
+          _buildPostsList(isClassTab: false),
+          _buildPostsList(isClassTab: true),
+        ],
+      ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+             BoxShadow(
+               color: Colors.black.withValues(alpha: 0.15),
+               blurRadius: 12,
+               offset: const Offset(0, 4),
+             ),
+           ],
+        ),
+        child: FloatingActionButton(
+          onPressed: () => _navigateToCreatePost(),
+          backgroundColor: const Color(0xFF1A1A1A),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Icon(LucideIcons.plus, color: Colors.white, size: 24),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostsList({required bool isClassTab}) {
+    // Filter posts based on tab - create a safe copy
+    List<SocialMediaPost> filteredPosts = List.from(_posts);
+    
+    if (isClassTab) {
+      if (_currentClassCode == null || _currentClassCode!.isEmpty) {
+        // If no class code, show empty state
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  LucideIcons.users,
+                  size: 40,
+                  color: Colors.grey[400],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Tidak ada kode kelas',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Anda belum terdaftar di kelas manapun',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      // Filter posts by class code - create a safe filtered list
+      filteredPosts = _posts.where((post) => post.classCode == _currentClassCode).toList();
+    }
+
+    if (_isLoading && filteredPosts.isEmpty) {
+      return Column(
+        children: [
+          _buildPostingSection(isClassTab: isClassTab),
+          const Expanded(
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Colors.black,
               ),
             ),
           ),
-      ],
+        ],
+      );
+    }
+
+    if (filteredPosts.isEmpty) {
+      return Column(
+        children: [
+          _buildPostingSection(isClassTab: isClassTab),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      LucideIcons.messageSquare,
+                      size: 40,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    isClassTab ? 'Belum ada postingan di kelas' : 'Belum ada postingan',
+                    style: TextStyle(
+                      fontSize: 20,
+                      color: Colors.grey[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isClassTab 
+                        ? 'Jadilah yang pertama membuat postingan di kelas $_currentClassCode!'
+                        : 'Jadilah yang pertama membuat postingan!',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _refreshPosts,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+        itemCount: filteredPosts.length + 1 + (_hasMore ? 1 : 0), // +1 for posting section
+        itemBuilder: (context, index) {
+          // First item is the posting section
+          if (index == 0) {
+            return _buildPostingSection(isClassTab: isClassTab);
+          }
+          
+          // Adjust index for posts
+          final postIndex = index - 1;
+          
+          if (postIndex == filteredPosts.length) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(
+                  color: Colors.black,
+                ),
+              ),
+            );
+          }
+
+          // Add bounds checking to prevent RangeError
+          if (postIndex >= filteredPosts.length) {
+            return const SizedBox.shrink();
+          }
+
+          return _buildThreadsPostCard(filteredPosts[postIndex]);
+        },
+      ),
     );
   }
 
-  Widget _buildModernPostActions(SocialMediaPost post) {
-    final isLiked = post.likedBy.contains(_socialMediaService.currentUserId);
-    
-    return Row(
-      children: [
-        _buildActionButton(
-          icon: isLiked ? LucideIcons.heart : LucideIcons.heart,
-          label: '${post.likesCount}',
-          color: isLiked ? Colors.red : const Color(0xFF6B7280),
-          onTap: () => _toggleLike(post),
-          filled: isLiked,
+  Widget _buildPostingSection({required bool isClassTab}) {
+     return Container(
+       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+       decoration: BoxDecoration(
+         color: Colors.white,
+         borderRadius: BorderRadius.circular(12),
+         boxShadow: [
+           BoxShadow(
+             color: Colors.black.withValues(alpha: 0.04),
+             blurRadius: 6,
+             offset: const Offset(0, 1),
+           ),
+         ],
+       ),
+       child: Material(
+         color: Colors.transparent,
+         child: InkWell(
+           onTap: () {
+             Navigator.push(
+               context,
+               MaterialPageRoute(
+                 builder: (context) => const CreatePostScreen(),
+               ),
+             );
+           },
+           borderRadius: BorderRadius.circular(12),
+           child: Padding(
+             padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Profile Picture with modern styling
+                 Container(
+                   width: 36,
+                   height: 36,
+                   margin: EdgeInsets.only(bottom: 6),
+                   decoration: BoxDecoration(
+                     gradient: LinearGradient(
+                       colors: [
+                         Colors.grey[200]!,
+                         Colors.grey[300]!,
+                       ],
+                       begin: Alignment.topLeft,
+                       end: Alignment.bottomRight,
+                     ),
+                     borderRadius: BorderRadius.circular(18),
+                     boxShadow: [
+                       BoxShadow(
+                         color: Colors.black.withValues(alpha: 0.06),
+                         blurRadius: 3,
+                         offset: const Offset(0, 1),
+                       ),
+                     ],
+                   ),
+                   child: Center(
+                     child: Text(
+                       (_currentUserName != null && _currentUserName!.isNotEmpty)
+                           ? _currentUserName![0].toUpperCase()
+                           : 'U',
+                       style: const TextStyle(
+                         color: Color(0xFF1A1A1A),
+                         fontWeight: FontWeight.w700,
+                         fontSize: 16,
+                       ),
+                     ),
+                   ),
+                 ),
+                 const SizedBox(width: 12),
+                // Post Input Section
+                Expanded(
+                  child: Text(
+                    isClassTab 
+                        ? 'Apa yang ingin kamu bagikan di kelas $_currentClassCode?'
+                        : 'Mau Cerita Apa?',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ),
+                // Add subtle arrow indicator
+                Icon(
+                  LucideIcons.edit3,
+                  size: 18,
+                  color: Colors.grey[400],
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(width: 16),
-        _buildActionButton(
-          icon: LucideIcons.messageCircle,
-          label: '${post.commentsCount}',
-          color: const Color(0xFF6B7280),
-          onTap: () => _navigateToPostDetail(post),
-        ),
-        const Spacer(),
-        _buildActionButton(
-          icon: LucideIcons.share,
-          label: '',
-          color: const Color(0xFF6B7280),
-          onTap: () => _sharePost(post),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildActionButton({
+  Widget _buildThreadsPostCard(SocialMediaPost post) {
+     return Container(
+       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+       decoration: BoxDecoration(
+         color: Colors.white,
+         borderRadius: BorderRadius.circular(12),
+         boxShadow: [
+           BoxShadow(
+             color: Colors.black.withValues(alpha: 0.04),
+             blurRadius: 6,
+             offset: const Offset(0, 1),
+           ),
+         ],
+       ),
+       child: Material(
+         color: Colors.transparent,
+         child: InkWell(
+           onTap: () => _navigateToPostDetail(post),
+           borderRadius: BorderRadius.circular(12),
+           child: Padding(
+             padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Profile Picture with modern styling
+                GestureDetector(
+                   onTap: () => _navigateToProfile(post.authorId, post.authorName),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.blue[100]!,
+                          Colors.blue[200]!,
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                         BoxShadow(
+                           color: Colors.blue.withValues(alpha: 0.15),
+                           blurRadius: 3,
+                           offset: const Offset(0, 1),
+                         ),
+                       ],
+                    ),
+                    child: Center(
+                      child: Text(
+                       (post.authorName.isNotEmpty)
+                           ? post.authorName[0].toUpperCase()
+                           : 'U',
+                       style: const TextStyle(
+                         color: Color(0xFF1565C0),
+                         fontWeight: FontWeight.w700,
+                         fontSize: 16,
+                       ),
+                     ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Post Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header with username and time
+                      Row(
+                        children: [
+                          GestureDetector(
+                           onTap: () => _navigateToProfile(post.authorId, post.authorName),
+                           child: Text(
+                             post.authorName,
+                             style: const TextStyle(
+                               fontWeight: FontWeight.w600,
+                               fontSize: 14,
+                               color: Color(0xFF1A1A1A),
+                             ),
+                           ),
+                         ),
+                         const SizedBox(width: 6),
+                         Container(
+                           width: 3,
+                           height: 3,
+                           decoration: BoxDecoration(
+                             color: Colors.grey[400],
+                             borderRadius: BorderRadius.circular(1.5),
+                           ),
+                         ),
+                         const SizedBox(width: 6),
+                         Text(
+                           _formatDateTime(post.createdAt),
+                           style: TextStyle(
+                             color: Colors.grey[500],
+                             fontSize: 12,
+                             fontWeight: FontWeight.w400,
+                           ),
+                         ),
+                         const Spacer(),
+                         if (post.authorId == _socialMediaService.currentUserId)
+                           Container(
+                             decoration: BoxDecoration(
+                               color: Colors.grey[50],
+                               borderRadius: BorderRadius.circular(8),
+                             ),
+                             child: PopupMenuButton<String>(
+                               onSelected: (value) => _handlePostAction(value, post),
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        Icon(LucideIcons.edit2, size: 16),
+                                        SizedBox(width: 8),
+                                        Text('Edit'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'delete',
+                                    child: Row(
+                                      children: [
+                                        Icon(LucideIcons.trash2, size: 16, color: Colors.red),
+                                        SizedBox(width: 8),
+                                        Text('Hapus', style: TextStyle(color: Colors.red)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Icon(
+                                    LucideIcons.moreHorizontal,
+                                    color: Colors.grey[600],
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Post content with better typography
+                     Text(
+                       post.content,
+                       style: const TextStyle(
+                         fontSize: 14,
+                         height: 1.4,
+                         color: Color(0xFF2A2A2A),
+                       ),
+                     ),
+                     if (post.isModerated)
+                       Container(
+                         margin: const EdgeInsets.only(top: 12),
+                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                         decoration: BoxDecoration(
+                           color: const Color(0xFFFEF3C7),
+                           borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFD97706), width: 1),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                LucideIcons.shield,
+                                size: 16,
+                                color: Color(0xFFD97706),
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'Konten telah dimoderasi',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFFD97706),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      // Action buttons with modern styling
+                      Row(
+                        children: [
+                          _buildThreadsActionButton(
+                           icon: post.likedBy.contains(_socialMediaService.currentUserId) ? LucideIcons.heart : LucideIcons.heart,
+                           label: '${post.likesCount}',
+                           color: post.likedBy.contains(_socialMediaService.currentUserId) ? Colors.red : Colors.grey[600]!,
+                           onTap: () => _toggleLike(post.id),
+                         ),
+                         const SizedBox(width: 16),
+                         _buildThreadsActionButton(
+                           icon: LucideIcons.messageCircle,
+                           label: '${post.commentsCount}',
+                           color: Colors.grey[600]!,
+                           onTap: () => _navigateToPostDetail(post),
+                         ),
+                         const SizedBox(width: 16),
+                        //  _buildThreadsActionButton(
+                        //    icon: LucideIcons.repeat2,
+                        //    label: 'Share',
+                        //    color: Colors.grey[600]!,
+                        //    onTap: () => _sharePost(post),
+                        //  ),
+                        //  const SizedBox(width: 16),
+                        //  _buildThreadsActionButton(
+                        //    icon: LucideIcons.send,
+                        //    label: 'Send',
+                        //    color: Colors.grey[600]!,
+                        //    onTap: () => _sharePost(post),
+                        //  ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThreadsActionButton({
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
-    bool filled = false,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: filled ? color.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.grey[200]!,
+            width: 1,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 18,
+              size: 16,
               color: color,
             ),
-            if (label.isNotEmpty) ...[
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
-            ],
+            ),
           ],
         ),
       ),
@@ -726,9 +851,11 @@ class _SocialMediaScreenState extends State<SocialMediaScreen>
     }
   }
 
-  Future<void> _toggleLike(SocialMediaPost post) async {
+
+
+  Future<void> _toggleLike(String postId) async {
     try {
-      await _socialMediaService.togglePostLike(post.id);
+      await _socialMediaService.togglePostLike(postId);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -809,12 +936,7 @@ class _SocialMediaScreenState extends State<SocialMediaScreen>
     }
   }
 
-  void _sharePost(SocialMediaPost post) {
-    // Implementasi share functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fitur share akan segera tersedia')),
-    );
-  }
+
 
   void _navigateToCreatePost() {
     Navigator.push(
@@ -846,50 +968,4 @@ class _SocialMediaScreenState extends State<SocialMediaScreen>
     );
   }
 
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cari Postingan'),
-        content: TextField(
-          controller: _searchController,
-          decoration: const InputDecoration(
-            hintText: 'Masukkan kata kunci...',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _performSearch(_searchController.text);
-            },
-            child: const Text('Cari'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _performSearch(String query) async {
-    if (query.trim().isEmpty) return;
-
-    try {
-      final results = await _socialMediaService.searchPosts(query);
-      setState(() {
-        _posts = results;
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
-    }
-  }
 }

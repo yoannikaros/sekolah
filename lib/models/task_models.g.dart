@@ -10,6 +10,7 @@ Task _$TaskFromJson(Map<String, dynamic> json) => Task(
   id: json['id'] as String,
   teacherId: json['teacherId'] as String,
   subjectId: json['subjectId'] as String,
+  chapterId: json['chapterId'] as String?,
   title: json['title'] as String,
   description: json['description'] as String,
   createdAt: const DateTimeConverter().fromJson(json['createdAt']),
@@ -24,6 +25,7 @@ Map<String, dynamic> _$TaskToJson(Task instance) => <String, dynamic>{
   'id': instance.id,
   'teacherId': instance.teacherId,
   'subjectId': instance.subjectId,
+  'chapterId': instance.chapterId,
   'title': instance.title,
   'description': instance.description,
   'createdAt': const DateTimeConverter().toJson(instance.createdAt),
@@ -105,3 +107,21 @@ Map<String, dynamic> _$TaskWithDetailsToJson(TaskWithDetails instance) =>
       'submissionCount': instance.submissionCount,
       'totalStudents': instance.totalStudents,
     };
+
+TaskSubmissionWithDetails _$TaskSubmissionWithDetailsFromJson(
+  Map<String, dynamic> json,
+) => TaskSubmissionWithDetails(
+  submission: TaskSubmission.fromJson(
+    json['submission'] as Map<String, dynamic>,
+  ),
+  studentName: json['studentName'] as String,
+  taskTitle: json['taskTitle'] as String,
+);
+
+Map<String, dynamic> _$TaskSubmissionWithDetailsToJson(
+  TaskSubmissionWithDetails instance,
+) => <String, dynamic>{
+  'submission': instance.submission,
+  'studentName': instance.studentName,
+  'taskTitle': instance.taskTitle,
+};

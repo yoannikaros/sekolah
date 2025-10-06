@@ -369,19 +369,6 @@ class AdminService {
     }
   }
 
-  Future<ClassCode?> getClassCodeById(String id) async {
-    try {
-      final doc = await _firestore.collection('class_codes').doc(id).get();
-      if (doc.exists) {
-        return ClassCode.fromJson({...doc.data()!, 'id': doc.id});
-      }
-      return null;
-    } catch (e) {
-      // Error getting class code: $e
-      return null;
-    }
-  }
-
   // Student CRUD Operations
   Future<String?> createStudent(Student student, {String? uid}) async {
     try {
@@ -2039,6 +2026,246 @@ class AdminService {
         'classCodes': 0,
         'students': 0,
       };
+    }
+  }
+
+  // Additional methods for student task submission functionality
+  Future<Student?> getStudentByUserId(String userId) async {
+    try {
+      if (kDebugMode) {
+        print('AdminService: Getting student by user ID: $userId');
+      }
+      
+      // First try to get by document ID (Firebase Auth UID)
+      final doc = await _firestore.collection('students').doc(userId).get();
+      
+      if (doc.exists) {
+        final data = doc.data()!;
+        data['id'] = doc.id;
+        
+        final student = Student.fromJson(data);
+        
+        if (kDebugMode) {
+          print('AdminService: Found student by document ID: ${student.name} (${student.email})');
+        }
+        
+        return student;
+      } else {
+        if (kDebugMode) {
+          print('AdminService: Student not found by document ID, trying userId field...');
+        }
+        
+        // Fallback: search by userId field (for backward compatibility)
+        final querySnapshot = await _firestore
+            .collection('students')
+            .where('userId', isEqualTo: userId)
+            .where('isActive', isEqualTo: true)
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          final doc = querySnapshot.docs.first;
+          final data = doc.data();
+          data['id'] = doc.id;
+          
+          final student = Student.fromJson(data);
+          
+          if (kDebugMode) {
+            print('AdminService: Found student by userId field: ${student.name} (${student.email})');
+          }
+          
+          return student;
+        } else {
+          if (kDebugMode) {
+            print('AdminService: No student found for user ID: $userId');
+          }
+          return null;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('AdminService: Error getting student by user ID: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<List<Subject>> getSubjectsBySchoolAndClassCode(String schoolId, String classCodeId) async {
+    try {
+      if (kDebugMode) {
+        print('AdminService: Getting subjects for school $schoolId and class code $classCodeId');
+      }
+      
+      QuerySnapshot querySnapshot;
+      bool usedOrderBy = false;
+      
+      try {
+        // Try with orderBy first (requires composite index)
+        if (kDebugMode) {
+          print('AdminService: Attempting query with orderBy...');
+        }
+        querySnapshot = await _firestore
+            .collection('subjects')
+            .where('schoolId', isEqualTo: schoolId)
+            .where('classCodeIds', arrayContains: classCodeId)
+            .where('isActive', isEqualTo: true)
+            .orderBy('name')
+            .get();
+        usedOrderBy = true;
+        if (kDebugMode) {
+          print('AdminService: Query with orderBy successful');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('AdminService: Index not ready, trying without orderBy: $e');
+        }
+        
+        // Fallback: query without orderBy (doesn't require composite index)
+        querySnapshot = await _firestore
+            .collection('subjects')
+            .where('schoolId', isEqualTo: schoolId)
+            .where('classCodeIds', arrayContains: classCodeId)
+            .where('isActive', isEqualTo: true)
+            .get();
+        if (kDebugMode) {
+          print('AdminService: Query without orderBy successful');
+        }
+      }
+
+      if (kDebugMode) {
+        print('AdminService: Query returned ${querySnapshot.docs.length} documents');
+      }
+
+      final subjects = <Subject>[];
+      for (final doc in querySnapshot.docs) {
+        try {
+          final data = doc.data() as Map<String, dynamic>;
+          data['id'] = doc.id;
+          
+          if (kDebugMode) {
+            print('AdminService: Processing document ${doc.id}:');
+            print('  - schoolId: ${data['schoolId']}');
+            print('  - classCodeIds: ${data['classCodeIds']}');
+            print('  - isActive: ${data['isActive']}');
+            print('  - name: ${data['name']}');
+          }
+          
+          // Parse dates
+          if (data['createdAt'] is String) {
+            data['createdAt'] = DateTime.parse(data['createdAt']);
+          }
+          if (data['updatedAt'] is String) {
+            data['updatedAt'] = DateTime.parse(data['updatedAt']);
+          }
+          
+          final subject = Subject.fromJson(data);
+          subjects.add(subject);
+          
+          if (kDebugMode) {
+            print('AdminService: Successfully parsed subject: ${subject.name} (${subject.code})');
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('AdminService: Error parsing subject document ${doc.id}: $e');
+          }
+        }
+      }
+
+      // Sort manually if we couldn't use orderBy
+      if (!usedOrderBy) {
+        subjects.sort((a, b) => a.name.compareTo(b.name));
+        if (kDebugMode) {
+          print('AdminService: Manually sorted ${subjects.length} subjects');
+        }
+      }
+
+      if (kDebugMode) {
+        print('AdminService: Returning ${subjects.length} subjects');
+      }
+
+      return subjects;
+    } catch (e) {
+      if (kDebugMode) {
+        print('AdminService: Error getting subjects by school and class code: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<ClassCode?> getClassCodeById(String classCodeId) async {
+    try {
+      if (kDebugMode) {
+        print('AdminService: Getting class code by ID: $classCodeId');
+      }
+      
+      // First, try to get by document ID
+      final doc = await _firestore.collection('class_codes').doc(classCodeId).get();
+      
+      if (doc.exists) {
+        final data = doc.data()!;
+        data['id'] = doc.id;
+        
+        // Handle nullable schoolId
+        if (data['schoolId'] == null || data['schoolId'] == '') {
+          data['schoolId'] = null;
+        }
+        
+        final classCode = ClassCode.fromJson(data);
+        
+        if (kDebugMode) {
+          print('AdminService: Found class code by ID: ${classCode.code} - ${classCode.name}');
+        }
+        
+        return classCode;
+      } else {
+        if (kDebugMode) {
+          print('AdminService: Class code not found by document ID: $classCodeId');
+          print('AdminService: Trying to search by code field...');
+        }
+        
+        // If not found by document ID, try searching by code field
+        final querySnapshot = await _firestore
+            .collection('class_codes')
+            .where('code', isEqualTo: classCodeId)
+            .limit(1)
+            .get();
+            
+        if (querySnapshot.docs.isNotEmpty) {
+          final doc = querySnapshot.docs.first;
+          final data = doc.data();
+          data['id'] = doc.id;
+          
+          // Handle nullable schoolId
+          if (data['schoolId'] == null || data['schoolId'] == '') {
+            data['schoolId'] = null;
+          }
+          
+          final classCode = ClassCode.fromJson(data);
+          
+          if (kDebugMode) {
+            print('AdminService: Found class code by code field: ${classCode.code} - ${classCode.name} (ID: ${classCode.id})');
+          }
+          
+          return classCode;
+        } else {
+          if (kDebugMode) {
+            print('AdminService: Class code not found by code field either: $classCodeId');
+            // Let's see what class codes actually exist
+            final allClassCodes = await _firestore.collection('class_codes').limit(10).get();
+            print('AdminService: Available class codes in database:');
+            for (var doc in allClassCodes.docs) {
+              final data = doc.data();
+              print('  - ID: ${doc.id}, Code: ${data['code']}, Name: ${data['name']}, Active: ${data['isActive']}');
+            }
+          }
+          return null;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('AdminService: Error getting class code by ID: $e');
+      }
+      return null;
     }
   }
 }

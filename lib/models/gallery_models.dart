@@ -297,3 +297,234 @@ class GalleryAlbumRequest {
 
   Map<String, dynamic> toJson() => _$GalleryAlbumRequestToJson(this);
 }
+
+@JsonSerializable()
+class GalleryLike {
+  final String id;
+  final String photoId;
+  final String studentId;
+  final String studentName;
+  final String schoolId;
+  final DateTime createdAt;
+
+  GalleryLike({
+    required this.id,
+    required this.photoId,
+    required this.studentId,
+    required this.studentName,
+    required this.schoolId,
+    required this.createdAt,
+  });
+
+  GalleryLike copyWith({
+    String? id,
+    String? photoId,
+    String? studentId,
+    String? studentName,
+    String? schoolId,
+    DateTime? createdAt,
+  }) {
+    return GalleryLike(
+      id: id ?? this.id,
+      photoId: photoId ?? this.photoId,
+      studentId: studentId ?? this.studentId,
+      studentName: studentName ?? this.studentName,
+      schoolId: schoolId ?? this.schoolId,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  factory GalleryLike.fromJson(Map<String, dynamic> json) =>
+      _$GalleryLikeFromJson(json);
+
+  Map<String, dynamic> toJson() => _$GalleryLikeToJson(this);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is GalleryLike &&
+        other.id == id &&
+        other.photoId == photoId &&
+        other.studentId == studentId &&
+        other.studentName == studentName &&
+        other.schoolId == schoolId &&
+        other.createdAt == createdAt;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      photoId,
+      studentId,
+      studentName,
+      schoolId,
+      createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'GalleryLike(id: $id, photoId: $photoId, studentId: $studentId)';
+  }
+}
+
+@JsonSerializable()
+class GalleryComment {
+  final String id;
+  final String photoId;
+  final String studentId;
+  final String studentName;
+  final String schoolId;
+  final String comment;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final bool isActive;
+
+  GalleryComment({
+    required this.id,
+    required this.photoId,
+    required this.studentId,
+    required this.studentName,
+    required this.schoolId,
+    required this.comment,
+    required this.createdAt,
+    this.updatedAt,
+    this.isActive = true,
+  });
+
+  GalleryComment copyWith({
+    String? id,
+    String? photoId,
+    String? studentId,
+    String? studentName,
+    String? schoolId,
+    String? comment,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isActive,
+  }) {
+    return GalleryComment(
+      id: id ?? this.id,
+      photoId: photoId ?? this.photoId,
+      studentId: studentId ?? this.studentId,
+      studentName: studentName ?? this.studentName,
+      schoolId: schoolId ?? this.schoolId,
+      comment: comment ?? this.comment,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
+  factory GalleryComment.fromJson(Map<String, dynamic> json) =>
+      _$GalleryCommentFromJson(json);
+
+  Map<String, dynamic> toJson() => _$GalleryCommentToJson(this);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is GalleryComment &&
+        other.id == id &&
+        other.photoId == photoId &&
+        other.studentId == studentId &&
+        other.studentName == studentName &&
+        other.schoolId == schoolId &&
+        other.comment == comment &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt &&
+        other.isActive == isActive;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      id,
+      photoId,
+      studentId,
+      studentName,
+      schoolId,
+      comment,
+      createdAt,
+      updatedAt,
+      isActive,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'GalleryComment(id: $id, photoId: $photoId, studentId: $studentId, comment: $comment)';
+  }
+}
+
+@JsonSerializable()
+class GalleryPhotoWithStats {
+  final GalleryPhoto photo;
+  final int likeCount;
+  final int commentCount;
+  final bool isLikedByCurrentUser;
+  final List<GalleryLike> likes;
+  final List<GalleryComment> comments;
+
+  GalleryPhotoWithStats({
+    required this.photo,
+    required this.likeCount,
+    required this.commentCount,
+    required this.isLikedByCurrentUser,
+    this.likes = const [],
+    this.comments = const [],
+  });
+
+  GalleryPhotoWithStats copyWith({
+    GalleryPhoto? photo,
+    int? likeCount,
+    int? commentCount,
+    bool? isLikedByCurrentUser,
+    List<GalleryLike>? likes,
+    List<GalleryComment>? comments,
+  }) {
+    return GalleryPhotoWithStats(
+      photo: photo ?? this.photo,
+      likeCount: likeCount ?? this.likeCount,
+      commentCount: commentCount ?? this.commentCount,
+      isLikedByCurrentUser: isLikedByCurrentUser ?? this.isLikedByCurrentUser,
+      likes: likes ?? this.likes,
+      comments: comments ?? this.comments,
+    );
+  }
+
+  factory GalleryPhotoWithStats.fromJson(Map<String, dynamic> json) =>
+      _$GalleryPhotoWithStatsFromJson(json);
+
+  Map<String, dynamic> toJson() => _$GalleryPhotoWithStatsToJson(this);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is GalleryPhotoWithStats &&
+        other.photo == photo &&
+        other.likeCount == likeCount &&
+        other.commentCount == commentCount &&
+        other.isLikedByCurrentUser == isLikedByCurrentUser &&
+        listEquals(other.likes, likes) &&
+        listEquals(other.comments, comments);
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      photo,
+      likeCount,
+      commentCount,
+      isLikedByCurrentUser,
+      likes,
+      comments,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'GalleryPhotoWithStats(photoId: ${photo.id}, likes: $likeCount, comments: $commentCount)';
+  }
+}

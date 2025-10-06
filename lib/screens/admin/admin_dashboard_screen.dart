@@ -340,19 +340,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                                     ),
                                   ),
                                 ),
-                                _buildManagementCard(
-                                  'Kelola Kuis',
-                                  'Kelola Bab, Kuis, dan Soal dengan sistem bertingkat',
-                                  Icons.quiz_rounded,
-                                  const Color(0xFF673AB7),
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const ChapterManagementScreen(),
-                                    ),
-                                  ),
-                                ),
+                                // _buildManagementCard(
+                                //   'Kelola Kuis',
+                                //   'Kelola Bab, Kuis, dan Soal dengan sistem bertingkat',
+                                //   Icons.quiz_rounded,
+                                //   const Color(0xFF673AB7),
+                                //   () => Navigator.push(
+                                //     context,
+                                //     MaterialPageRoute(
+                                //       builder: (context) =>
+                                //           const ChapterManagementScreen(),
+                                //     ),
+                                //   ),
+                                // ),
                                 _buildManagementCard(
                                   'Kelola Kuis',
                                   'Kelola Bab, Kuis, dan Soal dengan sistem bertingkat',

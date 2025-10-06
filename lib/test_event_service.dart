@@ -120,7 +120,7 @@ class _TestEventServiceState extends State<TestEventService> {
       _testResults += '$result\n';
     });
     if (kDebugMode) {
-      print(result);
+      debugPrint(result);
     }
   }
 

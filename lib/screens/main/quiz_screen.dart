@@ -8,7 +8,14 @@ import 'quiz_detail_screen.dart';
 import 'class_code_screen.dart';
 
 class QuizScreen extends StatefulWidget {
-  const QuizScreen({super.key});
+  final String? subjectName;
+  final String? classCode;
+  
+  const QuizScreen({
+    super.key,
+    this.subjectName,
+    this.classCode,
+  });
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -67,11 +74,17 @@ class _QuizScreenState extends State<QuizScreen>
 
   Future<void> _checkClassCodeAndLoadChapters() async {
     try {
-      final userProfile = await _authService.getCurrentUserProfile();
-      final savedClassCodeId = userProfile?.classCode;
-      final savedClassName = userProfile?.name;
+      String? classCodeToUse = widget.classCode;
+      String? classNameToUse = widget.subjectName;
       
-      if (savedClassCodeId == null || savedClassCodeId.isEmpty) {
+      // If no class code provided via widget, get from user profile
+      if (classCodeToUse == null || classCodeToUse.isEmpty) {
+        final userProfile = await _authService.getCurrentUserProfile();
+        classCodeToUse = userProfile?.classCode;
+        classNameToUse = userProfile?.name;
+      }
+      
+      if (classCodeToUse == null || classCodeToUse.isEmpty) {
         // No class code found, redirect to class code input
         if (mounted) {
           Navigator.pushReplacement(
@@ -85,8 +98,8 @@ class _QuizScreenState extends State<QuizScreen>
       }
       
       setState(() {
-        _classCodeId = savedClassCodeId;
-        _className = savedClassName;
+        _classCodeId = classCodeToUse;
+        _className = classNameToUse;
       });
       
       await _loadChapters();
@@ -110,20 +123,30 @@ class _QuizScreenState extends State<QuizScreen>
       
       final chapters = await _chapterService.getAllChapters();
       
-      if (chapters.isEmpty) {
-        // No chapters found, redirect to home
-        if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/home',
-            (route) => false,
-          );
-        }
+      // Filter chapters by class code and subject name if provided
+      List<Chapter> filteredChapters = chapters.where((chapter) => 
+        chapter.classCode == _classCodeId && chapter.isActive
+      ).toList();
+      
+      // If subject name is provided, filter by subject name as well
+      if (widget.subjectName != null && widget.subjectName!.isNotEmpty) {
+        filteredChapters = filteredChapters.where((chapter) => 
+          chapter.subjectName == widget.subjectName
+        ).toList();
+      }
+      
+      if (filteredChapters.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = widget.subjectName != null 
+            ? 'Tidak ada bab tersedia untuk mata pelajaran ${widget.subjectName}'
+            : 'Tidak ada bab tersedia untuk kelas Anda';
+        });
         return;
       }
       
       setState(() {
-        _chapters = chapters;
+        _chapters = filteredChapters;
         _isLoading = false;
       });
       
@@ -150,6 +173,27 @@ class _QuizScreenState extends State<QuizScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            LucideIcons.arrowLeft,
+            color: Color(0xFF4F46E5),
+            size: 24,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Quiz Interaktif',
+          style: TextStyle(
+            color: Color(0xFF1F2937),
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: _isLoading
             ? _buildLoadingState()

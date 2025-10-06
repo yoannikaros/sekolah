@@ -128,3 +128,81 @@ Map<String, dynamic> _$GalleryAlbumRequestToJson(
   'classCode': instance.classCode,
   'tags': instance.tags,
 };
+
+GalleryLike _$GalleryLikeFromJson(Map<String, dynamic> json) => GalleryLike(
+  id: json['id'] as String,
+  photoId: json['photoId'] as String,
+  studentId: json['studentId'] as String,
+  studentName: json['studentName'] as String,
+  schoolId: json['schoolId'] as String,
+  createdAt: DateTime.parse(json['createdAt'] as String),
+);
+
+Map<String, dynamic> _$GalleryLikeToJson(GalleryLike instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'photoId': instance.photoId,
+      'studentId': instance.studentId,
+      'studentName': instance.studentName,
+      'schoolId': instance.schoolId,
+      'createdAt': instance.createdAt.toIso8601String(),
+    };
+
+GalleryComment _$GalleryCommentFromJson(Map<String, dynamic> json) =>
+    GalleryComment(
+      id: json['id'] as String,
+      photoId: json['photoId'] as String,
+      studentId: json['studentId'] as String,
+      studentName: json['studentName'] as String,
+      schoolId: json['schoolId'] as String,
+      comment: json['comment'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt:
+          json['updatedAt'] == null
+              ? null
+              : DateTime.parse(json['updatedAt'] as String),
+      isActive: json['isActive'] as bool? ?? true,
+    );
+
+Map<String, dynamic> _$GalleryCommentToJson(GalleryComment instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'photoId': instance.photoId,
+      'studentId': instance.studentId,
+      'studentName': instance.studentName,
+      'schoolId': instance.schoolId,
+      'comment': instance.comment,
+      'createdAt': instance.createdAt.toIso8601String(),
+      'updatedAt': instance.updatedAt?.toIso8601String(),
+      'isActive': instance.isActive,
+    };
+
+GalleryPhotoWithStats _$GalleryPhotoWithStatsFromJson(
+  Map<String, dynamic> json,
+) => GalleryPhotoWithStats(
+  photo: GalleryPhoto.fromJson(json['photo'] as Map<String, dynamic>),
+  likeCount: (json['likeCount'] as num).toInt(),
+  commentCount: (json['commentCount'] as num).toInt(),
+  isLikedByCurrentUser: json['isLikedByCurrentUser'] as bool,
+  likes:
+      (json['likes'] as List<dynamic>?)
+          ?.map((e) => GalleryLike.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+  comments:
+      (json['comments'] as List<dynamic>?)
+          ?.map((e) => GalleryComment.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const [],
+);
+
+Map<String, dynamic> _$GalleryPhotoWithStatsToJson(
+  GalleryPhotoWithStats instance,
+) => <String, dynamic>{
+  'photo': instance.photo,
+  'likeCount': instance.likeCount,
+  'commentCount': instance.commentCount,
+  'isLikedByCurrentUser': instance.isLikedByCurrentUser,
+  'likes': instance.likes,
+  'comments': instance.comments,
+};

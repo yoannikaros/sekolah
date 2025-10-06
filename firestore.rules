@@ -58,6 +58,58 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.token.role == 'admin';
     }
     
+    // Mading posts collection
+    match /mading_posts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update: if request.auth != null && (
+        // Allow post owner to update their posts
+        request.auth.uid == resource.data.userId ||
+        // Allow admin users to approve/moderate posts
+        request.auth.token.role == 'admin' ||
+        // Allow users to like/unlike posts (only updating likes field)
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likesCount'])
+      );
+      allow delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        request.auth.token.role == 'admin'
+      );
+    }
+    
+    // Subjects collection
+    match /subjects/{subjectId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.role == 'admin';
+    }
+    
+    // Students collection
+    match /students/{studentId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.uid == studentId ||
+        request.auth.token.role == 'admin'
+      );
+    }
+    
+    // Teachers collection
+    match /teachers/{teacherId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && (
+        request.auth.uid == teacherId ||
+        request.auth.token.role == 'admin'
+      );
+    }
+    
+    // Admin users collection
+    match /admin_users/{adminId} {
+      allow read, write: if request.auth != null && request.auth.token.role == 'admin';
+    }
+    
+    // School accounts collection
+    match /school_accounts/{accountId} {
+      allow read, write: if request.auth != null && request.auth.token.role == 'admin';
+    }
+    
     // Default fallback for other collections
     match /{document=**} {
       allow read, write: if request.auth != null;

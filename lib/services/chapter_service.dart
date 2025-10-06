@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/chapter_models.dart';
+import '../models/chapter_with_details.dart';
 
 class ChapterService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,6 +16,8 @@ class ChapterService {
         'description': chapter.description,
         'subjectName': chapter.subjectName,
         'classCode': chapter.classCode,
+        'schoolId': chapter.schoolId,
+        'teacherId': chapter.teacherId,
         'createdAt': chapter.createdAt.toIso8601String(),
         'updatedAt': chapter.updatedAt.toIso8601String(),
         'isActive': chapter.isActive,
@@ -42,6 +45,8 @@ class ChapterService {
         'description': chapter.description,
         'subjectName': chapter.subjectName,
         'classCode': chapter.classCode,
+        'schoolId': chapter.schoolId,
+        'teacherId': chapter.teacherId,
         'updatedAt': DateTime.now().toIso8601String(),
         'isActive': chapter.isActive,
         'sortOrder': chapter.sortOrder,
@@ -207,6 +212,145 @@ class ChapterService {
     } catch (e) {
       if (kDebugMode) {
         print('Error getting chapters by subject and class: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Get chapters by school ID
+  Future<List<Chapter>> getChaptersBySchoolId(String schoolId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('chapters')
+          .where('isActive', isEqualTo: true)
+          .where('schoolId', isEqualTo: schoolId)
+          .get();
+
+      final chapters = <Chapter>[];
+      for (final doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          final chapter = Chapter.fromJson(data);
+          chapters.add(chapter);
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error parsing chapter ${doc.id}: $e');
+          }
+        }
+      }
+
+      // Sort chapters manually
+      chapters.sort((a, b) {
+        if (a.sortOrder != null && b.sortOrder != null) {
+          return a.sortOrder!.compareTo(b.sortOrder!);
+        }
+        return b.createdAt.compareTo(a.createdAt);
+      });
+
+      return chapters;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting chapters by school ID: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Get chapters by teacher ID
+  Future<List<Chapter>> getChaptersByTeacherId(String teacherId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('chapters')
+          .where('isActive', isEqualTo: true)
+          .where('teacherId', isEqualTo: teacherId)
+          .get();
+
+      final chapters = <Chapter>[];
+      for (final doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          final chapter = Chapter.fromJson(data);
+          chapters.add(chapter);
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error parsing chapter ${doc.id}: $e');
+          }
+        }
+      }
+
+      // Sort chapters manually
+      chapters.sort((a, b) {
+        if (a.sortOrder != null && b.sortOrder != null) {
+          return a.sortOrder!.compareTo(b.sortOrder!);
+        }
+        return b.createdAt.compareTo(a.createdAt);
+      });
+
+      return chapters;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting chapters by teacher ID: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Get chapters with details (including teacher and subject names)
+  Future<List<ChapterWithDetails>> getChaptersWithDetails() async {
+    try {
+      final chapters = await getAllChapters();
+      final chaptersWithDetails = <ChapterWithDetails>[];
+
+      for (final chapter in chapters) {
+        // Get teacher name
+        String teacherName = 'Unknown Teacher';
+        try {
+          final teacherDoc = await _firestore.collection('teachers').doc(chapter.teacherId).get();
+          if (teacherDoc.exists) {
+            final teacherData = teacherDoc.data()!;
+            teacherName = teacherData['name'] ?? 'Unknown Teacher';
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error getting teacher name for chapter ${chapter.id}: $e');
+          }
+        }
+
+        // Get task counts
+        int totalTasks = 0;
+        int activeTasks = 0;
+        try {
+          final tasksSnapshot = await _firestore
+              .collection('tasks')
+              .where('chapterId', isEqualTo: chapter.id)
+              .get();
+          
+          totalTasks = tasksSnapshot.docs.length;
+          activeTasks = tasksSnapshot.docs.where((doc) {
+            final data = doc.data();
+            return data['isActive'] == true;
+          }).length;
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error getting task counts for chapter ${chapter.id}: $e');
+          }
+        }
+
+        chaptersWithDetails.add(ChapterWithDetails(
+          chapter: chapter,
+          teacherName: teacherName,
+          subjectName: chapter.subjectName,
+          totalTasks: totalTasks,
+          activeTasks: activeTasks,
+        ));
+      }
+
+      return chaptersWithDetails;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting chapters with details: $e');
       }
       return [];
     }

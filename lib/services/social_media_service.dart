@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/social_media_models.dart';
 import 'content_moderation_service.dart';
 
@@ -358,6 +359,10 @@ class SocialMediaService {
         replyToCommentId: replyToCommentId,
       );
 
+      if (kDebugMode) {
+        print('DEBUG: Creating comment with authorId: $currentUserId, authorName: $currentUserName');
+      }
+
       final batch = _firestore.batch();
 
       // Tambah komentar
@@ -602,6 +607,74 @@ class SocialMediaService {
     }
   }
 
+  /// Mengambil postingan yang dilike oleh user
+  Stream<List<SocialMediaPost>> getLikedPostsByUser(String userId) {
+    try {
+      return _firestore
+          .collection(_likesCollection)
+          .where('userId', isEqualTo: userId)
+          .where('commentId', isNull: true) // Only post likes, not comment likes
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .asyncMap((likesSnapshot) async {
+        if (likesSnapshot.docs.isEmpty) {
+          return <SocialMediaPost>[];
+        }
+
+        // Get post IDs from likes
+        final postIds = likesSnapshot.docs
+            .map((doc) => doc.data()['postId'] as String)
+            .toList();
+
+        if (postIds.isEmpty) {
+          return <SocialMediaPost>[];
+        }
+
+        // Fetch posts in batches (Firestore 'in' query limit is 10)
+        final List<SocialMediaPost> allPosts = [];
+        
+        for (int i = 0; i < postIds.length; i += 10) {
+          final batch = postIds.skip(i).take(10).toList();
+          
+          final postsQuery = await _firestore
+              .collection(_postsCollection)
+              .where(FieldPath.documentId, whereIn: batch)
+              .where('isDeleted', isEqualTo: false)
+              .get();
+
+          final batchPosts = postsQuery.docs
+              .map((doc) => SocialMediaPost.fromFirestore(doc))
+              .toList();
+          
+          allPosts.addAll(batchPosts);
+        }
+
+        // Sort by the original like order (most recent likes first)
+        final likeOrderMap = <String, int>{};
+        for (int i = 0; i < postIds.length; i++) {
+          likeOrderMap[postIds[i]] = i;
+        }
+
+        allPosts.sort((a, b) {
+          final aOrder = likeOrderMap[a.id] ?? 999999;
+          final bOrder = likeOrderMap[b.id] ?? 999999;
+          return aOrder.compareTo(bOrder);
+        });
+
+        if (kDebugMode) {
+          print('getLikedPostsByUser: Found ${allPosts.length} liked posts for user $userId');
+        }
+
+        return allPosts;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error in getLikedPostsByUser: $e');
+      }
+      return Stream.value(<SocialMediaPost>[]);
+    }
+  }
+
   // ==================== USER PROFILE OPERATIONS ====================
 
   /// Membuat atau mengupdate profil pengguna
@@ -695,6 +768,40 @@ class SocialMediaService {
 
   // ==================== FOLLOW OPERATIONS ====================
 
+  /// Memastikan profil pengguna ada di Firestore
+  Future<void> _ensureUserProfileExists(String userId) async {
+    try {
+      final profileDoc = await _firestore
+          .collection(_userProfilesCollection)
+          .doc(userId)
+          .get();
+
+      if (!profileDoc.exists) {
+        // Buat profil default jika tidak ada
+        final user = FirebaseAuth.instance.currentUser;
+        final defaultProfile = UserProfile(
+          id: userId,
+          name: user?.displayName ?? 'User',
+          email: user?.email ?? '',
+          bio: '',
+          avatar: user?.photoURL,
+          followersCount: 0,
+          followingCount: 0,
+          postsCount: 0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        await _firestore
+            .collection(_userProfilesCollection)
+            .doc(userId)
+            .set(defaultProfile.toFirestore());
+      }
+    } catch (e) {
+      throw Exception('Gagal memastikan profil pengguna: $e');
+    }
+  }
+
   /// Follow pengguna lain
   Future<void> followUser(String targetUserId) async {
     try {
@@ -703,26 +810,29 @@ class SocialMediaService {
       }
 
       if (currentUserId == targetUserId) {
-        throw Exception('Tidak bisa follow diri sendiri');
+        throw Exception('Tidak dapat mengikuti diri sendiri');
       }
 
-      // Cek apakah sudah follow
-      final existingFollow = await _firestore
-          .collection(_userFollowsCollection)
-          .where('followerId', isEqualTo: currentUserId)
-          .where('followingId', isEqualTo: targetUserId)
-          .get();
-
-      if (existingFollow.docs.isNotEmpty) {
+      // Cek apakah sudah mengikuti
+      final isAlreadyFollowing = await isFollowingUser(targetUserId);
+      if (isAlreadyFollowing) {
         throw Exception('Sudah mengikuti pengguna ini');
       }
+
+      // Ensure both user profiles exist before creating follow relationship
+      await _ensureUserProfileExists(currentUserId);
+      await _ensureUserProfileExists(targetUserId);
+
+      // Ambil nama pengguna untuk record follow
+      final currentProfile = await getUserProfile(currentUserId);
+      final targetProfile = await getUserProfile(targetUserId);
 
       final follow = UserFollow(
         id: '',
         followerId: currentUserId,
-        followerName: currentUserName,
         followingId: targetUserId,
-        followingName: '', // Will be updated by trigger or batch
+        followerName: currentProfile?.name ?? 'Unknown',
+        followingName: targetProfile?.name ?? 'Unknown',
         createdAt: DateTime.now(),
         isActive: true,
       );
@@ -770,6 +880,10 @@ class SocialMediaService {
       if (followQuery.docs.isEmpty) {
         throw Exception('Tidak mengikuti pengguna ini');
       }
+
+      // Ensure both user profiles exist before updating them
+      await _ensureUserProfileExists(currentUserId);
+      await _ensureUserProfileExists(targetUserId);
 
       final batch = _firestore.batch();
 
@@ -907,6 +1021,60 @@ class SocialMediaService {
       });
     } catch (e) {
       // Ignore error untuk menghindari crash
+    }
+  }
+
+  /// Mengambil komentar berdasarkan user ID
+  Stream<List<PostComment>> getCommentsByUser(String userId) {
+    try {
+      if (kDebugMode) {
+        print('DEBUG: Fetching comments for userId: $userId');
+      }
+      
+      return _firestore
+          .collection(_commentsCollection)
+          .where('authorId', isEqualTo: userId)
+          .where('isDeleted', isEqualTo: false)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+        if (kDebugMode) {
+          print('DEBUG: Found ${snapshot.docs.length} comments for user $userId');
+          for (var doc in snapshot.docs) {
+            final data = doc.data();
+            final content = data['content'] ?? '';
+            final contentPreview = content.length > 20 ? '${content.substring(0, 20)}...' : content;
+            print('DEBUG: Comment - ID: ${doc.id}, authorId: ${data['authorId']}, content: "$contentPreview", isDeleted: ${data['isDeleted']}');
+          }
+        }
+        
+        final comments = snapshot.docs
+            .map((doc) {
+              try {
+                return PostComment.fromFirestore(doc);
+              } catch (e) {
+                if (kDebugMode) {
+                  print('DEBUG: Error parsing comment ${doc.id}: $e');
+                  print('DEBUG: Comment data: ${doc.data()}');
+                }
+                return null;
+              }
+            })
+            .where((comment) => comment != null)
+            .cast<PostComment>()
+            .toList();
+            
+        if (kDebugMode) {
+          print('DEBUG: Successfully parsed ${comments.length} comments');
+        }
+        
+        return comments;
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('DEBUG: Error fetching comments for user $userId: $e');
+      }
+      throw Exception('Gagal mengambil komentar pengguna: $e');
     }
   }
 }

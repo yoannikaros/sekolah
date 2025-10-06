@@ -576,13 +576,46 @@ class AuthService {
         return true; // Already exists, no need to create
       }
 
+      // If classCode is provided, find the actual class code document ID
+      String classCodeId = '';
+      String schoolId = '';
+      
+      if (classCode != null && classCode.isNotEmpty) {
+        if (kDebugMode) {
+          print('Looking up class code: $classCode');
+        }
+        
+        // Search for class code by code field
+        final classCodeQuery = await _firestore
+            .collection('class_codes')
+            .where('code', isEqualTo: classCode)
+            .where('isActive', isEqualTo: true)
+            .limit(1)
+            .get();
+            
+        if (classCodeQuery.docs.isNotEmpty) {
+          final classCodeDoc = classCodeQuery.docs.first;
+          classCodeId = classCodeDoc.id; // Use document ID
+          final classCodeData = classCodeDoc.data();
+          schoolId = classCodeData['schoolId'] ?? '';
+          
+          if (kDebugMode) {
+            print('Found class code: $classCode -> ID: $classCodeId, School ID: $schoolId');
+          }
+        } else {
+          if (kDebugMode) {
+            print('Class code not found: $classCode');
+          }
+        }
+      }
+
       final student = Student(
         id: user.uid, // Use Firebase Auth UID as document ID
         name: name,
         email: email,
         studentId: user.uid, // Use Firebase Auth UID as student ID
-        classCodeId: classCode ?? '',
-        schoolId: '', // Default empty school ID
+        classCodeId: classCodeId, // Use the document ID, not the code
+        schoolId: schoolId, // Set the school ID from class code
         enrolledAt: DateTime.now(),
         isActive: true,
       );
@@ -592,7 +625,7 @@ class AuthService {
       final result = await adminService.createStudent(student, uid: user.uid);
       
       if (kDebugMode) {
-        print('Student profile created successfully for user: ${user.uid}');
+        print('Student profile created successfully for user: ${user.uid} with classCodeId: $classCodeId and schoolId: $schoolId');
       }
       return result != null;
     } catch (e) {
@@ -650,6 +683,25 @@ class AuthService {
     } catch (e) {
       if (kDebugMode) {
         print('Error getting or creating student profile: $e');
+      }
+      return null;
+    }
+  }
+
+  // Get student data by user ID
+  Future<Student?> getStudentData(String userId) async {
+    try {
+      final studentDoc = await _firestore.collection('students').doc(userId).get();
+      
+      if (studentDoc.exists) {
+        final studentData = studentDoc.data()!;
+        studentData['id'] = studentDoc.id;
+        return Student.fromJson(studentData);
+      }
+      return null;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting student data: $e');
       }
       return null;
     }

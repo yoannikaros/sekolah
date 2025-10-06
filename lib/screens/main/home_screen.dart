@@ -3,8 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:sekangkatanapp/screens/main/student_materi_screen.dart';
 import '../../services/auth_service.dart';
-import 'quiz_screen.dart';
+import '../../services/admin_service.dart';
+
 import 'social_media_screen.dart';
+import 'student_subject_selection_screen.dart';
+import 'subject_selection_screen.dart';
+import 'gallery_screen.dart';
+import 'mading_screen.dart';
+import 'leaderboard_screen.dart';
 
 import 'event_planner_student_screen.dart';
 import '../chat/chat_room_list_screen.dart';
@@ -21,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final PageController _bannerController = PageController();
   int _currentBannerIndex = 0;
   final AuthService _authService = AuthService();
+  final AdminService _adminService = AdminService();
 
   final List<BannerData> _banners = [
     BannerData(
@@ -58,9 +65,22 @@ class _HomeScreenState extends State<HomeScreen> {
       color: const Color(0xFF10B981),
       isAvailable: true,
     ),
-
+    MenuData(
+      name: "Leaderboard Kelas",
+      description: "Peringkat siswa berdasarkan skor quiz dan prestasi",
+      icon: LucideIcons.trophy,
+      color: const Color(0xFFFFD700),
+      isAvailable: true,
+    ),
     MenuData(
       name: "Galeri Foto",
+      description: "Album kegiatan kelas, watermark sekolah",
+      icon: LucideIcons.camera,
+      color: const Color(0xFFF59E0B),
+      isAvailable: true,
+    ),
+        MenuData(
+      name: "Mading Digital",
       description: "Album kegiatan kelas, watermark sekolah",
       icon: LucideIcons.camera,
       color: const Color(0xFFF59E0B),
@@ -303,14 +323,14 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildQuickActionCard(
-                  "Kuis Kelas",
-                  LucideIcons.brain,
-                  const Color(0xFF3B82F6),
+                  "Tugas Kelas",
+                  LucideIcons.fileText,
+                   Color(0xFF3B82F6),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const QuizScreen(),
+                        builder: (context) => const StudentSubjectSelectionScreen(),
                       ),
                     );
                   },
@@ -336,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionCard(
-                  "Social Media",
+                  "Sosial",
                   LucideIcons.users,
                   const Color(0xFF8B5CF6),
                   onTap: () {
@@ -349,25 +369,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildQuickActionCard(
-                  "Ranking",
-                  LucideIcons.trophy,
-                  const Color(0xFFEF4444),
-                  onTap: () {
-                    // TODO: Navigate to ranking screen
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Fitur Ranking akan segera hadir!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-              ),
             ],
           ),
+       
         ],
       ),
     );
@@ -701,10 +705,51 @@ class _HomeScreenState extends State<HomeScreen> {
           MaterialPageRoute(builder: (context) => const AIChatScreen()),
         );
         break;
+              case "Mading Digital":
+        try {
+          final user = _authService.currentUser;
+          if (user != null) {
+            // Get student data to retrieve schoolId
+            final student = await _adminService.getStudentByUserId(user.uid);
+            if (student != null && mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MadingScreen(
+                    schoolId: student.schoolId,
+                    currentUserId: user.uid,
+                    currentUserRole: 'student', // Assuming this is student role
+                  ),
+                ),
+              );
+            } else if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Data siswa tidak ditemukan'),
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Terjadi kesalahan: $e'),
+              ),
+            );
+          }
+        }
+        break;
       case "Quiz Interaktif Dasar":
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const QuizScreen()),
+          MaterialPageRoute(builder: (context) => const SubjectSelectionScreen()),
+        );
+        break;
+      case "Leaderboard Kelas":
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const LeaderboardScreen()),
         );
         break;
       case "Room Chat Kelas":
@@ -712,6 +757,41 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           MaterialPageRoute(builder: (context) => const ChatRoomListScreen()),
         );
+        break;
+      case "Galeri Foto":
+        // Get saved school ID and class code from student profile
+        String? savedSchoolId;
+        String? savedClassCode;
+        try {
+          final user = _authService.currentUser;
+          if (user != null) {
+            // Get student data to retrieve schoolId
+            final student = await _adminService.getStudentByUserId(user.uid);
+            if (student != null) {
+              savedSchoolId = student.schoolId;
+              
+              // Get class code from classCodeId
+              if (student.classCodeId.isNotEmpty) {
+                final classCode = await _adminService.getClassCodeById(student.classCodeId);
+                savedClassCode = classCode?.code;
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Error retrieving student data: $e');
+        }
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => GalleryScreen(
+                schoolId: savedSchoolId ?? '',
+                classCode: savedClassCode ?? '',
+              ),
+            ),
+          );
+        }
         break;
       case "Event Planner (Lite)":
         // Get saved class code from Firebase user profile

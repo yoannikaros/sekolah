@@ -20,6 +20,8 @@ class Chapter {
   final String? description; // Deskripsi Bab (opsional)
   final String subjectName; // Mata Pelajaran
   final String classCode; // Kode Kelas
+  final String schoolId; // ID Sekolah
+  final String teacherId; // ID Guru pembuat
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
@@ -31,6 +33,8 @@ class Chapter {
     this.description,
     required this.subjectName,
     required this.classCode,
+    required this.schoolId,
+    required this.teacherId,
     required this.createdAt,
     required this.updatedAt,
     this.isActive = true,
@@ -43,6 +47,8 @@ class Chapter {
     String? description,
     String? subjectName,
     String? classCode,
+    String? schoolId,
+    String? teacherId,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isActive,
@@ -54,6 +60,8 @@ class Chapter {
       description: description ?? this.description,
       subjectName: subjectName ?? this.subjectName,
       classCode: classCode ?? this.classCode,
+      schoolId: schoolId ?? this.schoolId,
+      teacherId: teacherId ?? this.teacherId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
@@ -125,6 +133,8 @@ class Chapter {
         description: json['description'] as String?,
         subjectName: json['subjectName'] as String? ?? '',
         classCode: json['classCode'] as String? ?? '',
+        schoolId: json['schoolId'] as String? ?? '',
+        teacherId: json['teacherId'] as String? ?? '',
         createdAt: createdAt,
         updatedAt: updatedAt,
         isActive: json['isActive'] as bool? ?? true,

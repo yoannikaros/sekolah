@@ -11,6 +11,7 @@ class TaskService {
       final taskData = {
         'teacherId': task.teacherId,
         'subjectId': task.subjectId,
+        'chapterId': task.chapterId,
         'title': task.title,
         'description': task.description,
         'createdAt': task.createdAt.toIso8601String(),
@@ -39,6 +40,7 @@ class TaskService {
       final taskData = {
         'teacherId': task.teacherId,
         'subjectId': task.subjectId,
+        'chapterId': task.chapterId,
         'title': task.title,
         'description': task.description,
         'openDate': task.openDate.toIso8601String(),
@@ -191,6 +193,38 @@ class TaskService {
     } catch (e) {
       if (kDebugMode) {
         print('Error fetching tasks by subject: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<List<Task>> getTasksByChapter(String chapterId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('tasks')
+          .where('chapterId', isEqualTo: chapterId)
+          .where('isActive', isEqualTo: true)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      final tasks = <Task>[];
+      for (var doc in querySnapshot.docs) {
+        try {
+          final data = doc.data();
+          data['id'] = doc.id;
+          final task = Task.fromJson(data);
+          tasks.add(task);
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error parsing task ${doc.id}: $e');
+          }
+        }
+      }
+
+      return tasks;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error fetching tasks by chapter: $e');
       }
       return [];
     }
@@ -558,6 +592,176 @@ class TaskService {
             }
           }
           
+          // Get class names and total students
+          List<String> classNames = [];
+          int totalStudents = 0;
+          try {
+            final taskClasses = await getTaskClassesByTask(task.id);
+            for (var taskClass in taskClasses) {
+              final classDoc = await _firestore.collection('class_codes').doc(taskClass.classId).get();
+              if (classDoc.exists) {
+                final classData = classDoc.data()!;
+                final className = classData['code'] ?? classData['name'] ?? 'Unknown Class';
+                classNames.add(className);
+                
+                // Count students in this class
+                final studentsQuery = await _firestore
+                    .collection('students')
+                    .where('classId', isEqualTo: taskClass.classId)
+                    .where('isActive', isEqualTo: true)
+                    .get();
+                totalStudents += studentsQuery.docs.length;
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error fetching classes for task ${task.id}: $e');
+            }
+          }
+          
+          // Get submission count
+           int submissionCount = 0;
+           try {
+             final submissions = await getSubmissionsByTask(task.id);
+             submissionCount = submissions.length;
+           } catch (e) {
+             if (kDebugMode) {
+               print('Error fetching submissions for task ${task.id}: $e');
+             }
+           }
+          
+          final taskWithDetails = TaskWithDetails(
+            task: task,
+            teacherName: teacherName,
+            subjectName: subjectName,
+            classNames: classNames,
+            submissionCount: submissionCount,
+            totalStudents: totalStudents,
+          );
+          
+          tasksWithDetails.add(taskWithDetails);
+          
+          if (kDebugMode) {
+            print('Added task with details: ${task.title} by $teacherName');
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error processing task ${task.id}: $e');
+          }
+        }
+      }
+      
+      if (kDebugMode) {
+        print('Returning ${tasksWithDetails.length} tasks with details');
+      }
+      
+      return tasksWithDetails;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error in getTasksWithDetails: $e');
+      }
+      return [];
+    }
+  }
+
+  /// Get task submissions with details (including student names)
+  Future<List<TaskSubmissionWithDetails>> getSubmissionsWithDetailsByTask(String taskId) async {
+    try {
+      final submissions = await getSubmissionsByTask(taskId);
+      final submissionsWithDetails = <TaskSubmissionWithDetails>[];
+
+      // Get task title
+      String taskTitle = 'Unknown Task';
+      try {
+        final taskDoc = await _firestore.collection('tasks').doc(taskId).get();
+        if (taskDoc.exists) {
+          taskTitle = taskDoc.data()?['title'] ?? 'Unknown Task';
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error getting task title for task $taskId: $e');
+        }
+      }
+
+      for (final submission in submissions) {
+        // Get student name
+        String studentName = 'Unknown Student';
+        try {
+          final studentDoc = await _firestore.collection('students').doc(submission.studentId).get();
+          if (studentDoc.exists) {
+            final studentData = studentDoc.data()!;
+            studentName = studentData['name'] ?? 'Unknown Student';
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Error getting student name for submission ${submission.id}: $e');
+          }
+        }
+
+        submissionsWithDetails.add(TaskSubmissionWithDetails(
+          submission: submission,
+          studentName: studentName,
+          taskTitle: taskTitle,
+        ));
+      }
+
+      return submissionsWithDetails;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting submissions with details: $e');
+      }
+      return [];
+    }
+  }
+
+  // Get tasks with details filtered by chapter
+  Future<List<TaskWithDetails>> getTasksWithDetailsByChapter(String chapterId) async {
+    try {
+      if (kDebugMode) {
+        print('Starting getTasksWithDetailsByChapter for chapter: $chapterId');
+      }
+      
+      // Get tasks filtered by chapter
+      final tasks = await getTasksByChapter(chapterId);
+      
+      if (kDebugMode) {
+        print('Retrieved ${tasks.length} tasks for chapter $chapterId');
+      }
+
+      final tasksWithDetails = <TaskWithDetails>[];
+      
+      for (var task in tasks) {
+        try {
+          if (kDebugMode) {
+            print('Processing task ${task.id}: ${task.title}');
+          }
+          
+          // Get teacher name
+          String teacherName = 'Unknown Teacher';
+          try {
+            final teacherDoc = await _firestore.collection('teachers').doc(task.teacherId).get();
+            if (teacherDoc.exists) {
+              teacherName = teacherDoc.data()?['name'] ?? 'Unknown Teacher';
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error fetching teacher ${task.teacherId}: $e');
+            }
+          }
+          
+          // Get subject name
+          String subjectName = 'Unknown Subject';
+          try {
+            final subjectDoc = await _firestore.collection('subjects').doc(task.subjectId).get();
+            if (subjectDoc.exists) {
+              subjectName = subjectDoc.data()?['name'] ?? 'Unknown Subject';
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error fetching subject ${task.subjectId}: $e');
+            }
+          }
+          
           // Get class names
           List<String> classNames = [];
           try {
@@ -609,17 +813,215 @@ class TaskService {
           }
         }
       }
-      
+
       if (kDebugMode) {
-        print('Returning ${tasksWithDetails.length} tasks with details');
+        print('Completed getTasksWithDetailsByChapter: ${tasksWithDetails.length} tasks with details');
       }
-      
+
       return tasksWithDetails;
     } catch (e) {
       if (kDebugMode) {
-        print('Error in getTasksWithDetails: $e');
+        print('Error getting tasks with details by chapter: $e');
       }
       return [];
+    }
+  }
+
+  // Additional methods for student task submission functionality
+  Future<List<TaskWithDetails>> getTasksBySubjectAndClassCode(String subjectId, String classCodeId) async {
+    try {
+      if (kDebugMode) {
+        print('TaskService: Getting tasks for subject $subjectId and class code $classCodeId');
+      }
+
+      // First get tasks by subject
+      final tasks = await getTasksBySubject(subjectId);
+      
+      if (kDebugMode) {
+        print('TaskService: Found ${tasks.length} tasks for subject');
+      }
+
+      final tasksWithDetails = <TaskWithDetails>[];
+
+      for (final task in tasks) {
+        try {
+          // Check if this task is assigned to the specified class code
+          final taskClasses = await getTaskClassesByTask(task.id);
+          final isAssignedToClass = taskClasses.any((tc) => tc.classId == classCodeId);
+          
+          if (!isAssignedToClass) {
+            if (kDebugMode) {
+              print('TaskService: Task ${task.title} not assigned to class $classCodeId, skipping');
+            }
+            continue;
+          }
+
+          if (kDebugMode) {
+            print('TaskService: Processing task: ${task.title}');
+          }
+
+          // Get teacher name
+          String teacherName = 'Unknown Teacher';
+          try {
+            final teacherDoc = await _firestore.collection('teachers').doc(task.teacherId).get();
+            if (teacherDoc.exists) {
+              teacherName = teacherDoc.data()?['name'] ?? 'Unknown Teacher';
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('TaskService: Error fetching teacher ${task.teacherId}: $e');
+            }
+          }
+
+          // Get subject name
+          String subjectName = 'Unknown Subject';
+          try {
+            final subjectDoc = await _firestore.collection('subjects').doc(task.subjectId).get();
+            if (subjectDoc.exists) {
+              subjectName = subjectDoc.data()?['name'] ?? 'Unknown Subject';
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('TaskService: Error fetching subject ${task.subjectId}: $e');
+            }
+          }
+
+          // Get class names
+          List<String> classNames = [];
+          try {
+            final classDoc = await _firestore.collection('class_codes').doc(classCodeId).get();
+            if (classDoc.exists) {
+              final className = classDoc.data()?['name'] ?? 'Unknown Class';
+              classNames.add(className);
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('TaskService: Error fetching class $classCodeId: $e');
+            }
+          }
+
+          // Get submission count for this class
+          int submissionCount = 0;
+          int totalStudents = 0;
+          try {
+            // Get students in this class
+            final studentsQuery = await _firestore
+                .collection('students')
+                .where('classCodeId', isEqualTo: classCodeId)
+                .where('isActive', isEqualTo: true)
+                .get();
+            totalStudents = studentsQuery.docs.length;
+
+            // Get submissions for this task
+            final submissions = await getSubmissionsByTask(task.id);
+            
+            // Count submissions from students in this class
+            final studentIds = studentsQuery.docs.map((doc) => doc.id).toSet();
+            submissionCount = submissions.where((s) => studentIds.contains(s.studentId)).length;
+            
+          } catch (e) {
+            if (kDebugMode) {
+              print('TaskService: Error calculating submission stats for task ${task.id}: $e');
+            }
+          }
+
+          final taskWithDetails = TaskWithDetails(
+            task: task,
+            teacherName: teacherName,
+            subjectName: subjectName,
+            classNames: classNames,
+            submissionCount: submissionCount,
+            totalStudents: totalStudents,
+          );
+
+          tasksWithDetails.add(taskWithDetails);
+
+          if (kDebugMode) {
+            print('TaskService: Added task with details: ${task.title} by $teacherName');
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('TaskService: Error processing task ${task.id}: $e');
+          }
+        }
+      }
+
+      if (kDebugMode) {
+        print('TaskService: Returning ${tasksWithDetails.length} tasks with details for class');
+      }
+
+      return tasksWithDetails;
+    } catch (e) {
+      if (kDebugMode) {
+        print('TaskService: Error getting tasks by subject and class code: $e');
+      }
+      return [];
+    }
+  }
+
+  Future<String?> createSubmission(TaskSubmission submission) async {
+    try {
+      if (kDebugMode) {
+        print('TaskService: Creating submission for task ${submission.taskId} by student ${submission.studentId}');
+      }
+
+      final submissionData = {
+        'taskId': submission.taskId,
+        'studentId': submission.studentId,
+        'submissionLink': submission.submissionLink,
+        'submissionDate': submission.submissionDate.toIso8601String(),
+        'notes': submission.notes,
+        'score': submission.score,
+        'feedback': submission.feedback,
+        'gradedAt': submission.gradedAt?.toIso8601String(),
+        'isLate': submission.isLate,
+        'isActive': submission.isActive,
+      };
+
+      final docRef = await _firestore.collection('task_submissions').add(submissionData);
+      
+      if (kDebugMode) {
+        print('TaskService: Submission created successfully with ID: ${docRef.id}');
+      }
+      
+      return docRef.id;
+    } catch (e) {
+      if (kDebugMode) {
+        print('TaskService: Error creating submission: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<bool> updateSubmission(TaskSubmission submission) async {
+    try {
+      if (kDebugMode) {
+        print('TaskService: Updating submission ${submission.id}');
+      }
+
+      final submissionData = {
+        'submissionLink': submission.submissionLink,
+        'submissionDate': submission.submissionDate.toIso8601String(),
+        'notes': submission.notes,
+        'score': submission.score,
+        'feedback': submission.feedback,
+        'gradedAt': submission.gradedAt?.toIso8601String(),
+        'isLate': submission.isLate,
+        'isActive': submission.isActive,
+      };
+
+      await _firestore.collection('task_submissions').doc(submission.id).update(submissionData);
+      
+      if (kDebugMode) {
+        print('TaskService: Submission updated successfully');
+      }
+      
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('TaskService: Error updating submission: $e');
+      }
+      return false;
     }
   }
 }

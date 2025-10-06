@@ -57,6 +57,7 @@ class Task {
   final String id; // ID Tugas (unik)
   final String teacherId; // Terhubung ke Guru (siapa yang membuat)
   final String subjectId; // Terhubung ke Mata Pelajaran (tugas mapel apa)
+  final String? chapterId; // Terhubung ke Bab (opsional untuk backward compatibility)
   final String title; // Judul Tugas (misalnya: BAB 1, BAB 2)
   final String description; // Deskripsi Tugas
   @DateTimeConverter()
@@ -74,6 +75,7 @@ class Task {
     required this.id,
     required this.teacherId,
     required this.subjectId,
+    this.chapterId,
     required this.title,
     required this.description,
     required this.createdAt,
@@ -88,6 +90,7 @@ class Task {
     String? id,
     String? teacherId,
     String? subjectId,
+    String? chapterId,
     String? title,
     String? description,
     DateTime? createdAt,
@@ -101,6 +104,7 @@ class Task {
       id: id ?? this.id,
       teacherId: teacherId ?? this.teacherId,
       subjectId: subjectId ?? this.subjectId,
+      chapterId: chapterId ?? this.chapterId,
       title: title ?? this.title,
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,
@@ -327,4 +331,23 @@ class TaskWithDetails {
     if (totalStudents == 0) return 0.0;
     return (submissionCount / totalStudents) * 100;
   }
+}
+
+// Model untuk menampilkan data pengumpulan tugas dengan informasi lengkap
+@JsonSerializable()
+class TaskSubmissionWithDetails {
+  final TaskSubmission submission;
+  final String studentName;
+  final String taskTitle;
+
+  TaskSubmissionWithDetails({
+    required this.submission,
+    required this.studentName,
+    required this.taskTitle,
+  });
+
+  factory TaskSubmissionWithDetails.fromJson(Map<String, dynamic> json) =>
+      _$TaskSubmissionWithDetailsFromJson(json);
+
+  Map<String, dynamic> toJson() => _$TaskSubmissionWithDetailsToJson(this);
 }
